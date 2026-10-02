@@ -1,7 +1,13 @@
-# Developer guide — `so_arm101_urdf`
+# Developer guide - `so_arm101_urdf`
 
 ROS 2 **Jazzy** description package for the **SO-ARM101** 6-DOF follower arm.
 Bringup, hardware plugin, and cameras live in **`lucy_ros_packages`**.
+
+## Architecture
+
+Hardware YAML schema lives in `config/hardware/` (radians).  
+Architecture index: [`lucy_ws/docs/architecture/README.md`](../../../docs/architecture/README.md) ·  
+System schematic (do not duplicate here): [`lucy_ws/docs/architecture/overview.md`](../../../docs/architecture/overview.md).
 
 ---
 
@@ -136,7 +142,7 @@ ros2 run xacro xacro description/urdf/robot.urdf.xacro \
 
 `lerobot-calibrate` records each servo's travel in raw STS3215 ticks. The
 hardware YAML stores the same windows in **radians**, on the scale the firmware
-maps onto ticks (`BusServoConfig`: 0–2π rad over 0–4096 ticks, so
+maps onto ticks (`BusServoConfig`: 0-2π rad over 0-4096 ticks, so
 `rad = ticks * 2π / 4096`).
 
 ```bash
@@ -149,11 +155,11 @@ It patches `config/hardware/active.yaml` and the preset named in
 `--dry-run` reports without writing; `--config` targets a different file.
 
 Records are paired with actuators by servo bus id against `physical_pin`, not by
-name — LeRobot's joint names have no relation to `urdf_joint`. A record matching
+name - LeRobot's joint names have no relation to `urdf_joint`. A record matching
 no actuator aborts the run before anything is written.
 
 `offset_rad` is set to π (2048 ticks), the homed centre the calibration
-establishes, rather than the midpoint of the window — those differ on any joint
+establishes, rather than the midpoint of the window - those differ on any joint
 whose travel is not symmetric, the gripper especially. `direction` is left alone:
 it is checked against the 3D view on hardware, and `drive_mode` describes an
 inversion relative to LeRobot's URDF, not ours. A non-zero `drive_mode` is
