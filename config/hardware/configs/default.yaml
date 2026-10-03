@@ -31,7 +31,7 @@ boards:
 
 actuators:
 # Servo angles on the firmware scale (radians in YAML): 0–2π rad maps onto the
-# STS3215 0–4096 tick span (BusServoConfig in firmwares/rp2040_bus_servo), so
+# STS3215 0–4096 tick span (BusServoConfig / HAS_BUS on rp2040_servo2040), so
 # rad = ticks * 2π / 4096. Windows are the recorded LeRobot follower calibration;
 # offset_rad pi is the homed centre (2048 ticks), which the calibration puts at
 # joint zero.
