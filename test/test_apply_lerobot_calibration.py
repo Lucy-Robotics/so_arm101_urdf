@@ -224,6 +224,11 @@ def test_real_config_round_trips():
     out, warnings = mod.apply_to_file(active, REAL_CALIBRATION)
     assert out == active.read_text(encoding='utf-8')
     assert not warnings
+    default = ROOT / 'config/hardware/configs/default.yaml'
+    out_default, warnings_default = mod.apply_to_file(default, REAL_CALIBRATION)
+    assert out_default == default.read_text(encoding='utf-8')
+    assert not warnings_default
+    assert active.read_text(encoding='utf-8') == default.read_text(encoding='utf-8')
 
 
 def test_main_is_self_sufficient_for_the_real_package(tmp_path, capsys):

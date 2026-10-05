@@ -80,7 +80,9 @@ so_arm101_urdf/
 
 Kinematics come from the calibrated `so101_new_calib.urdf` (SO-ARM100 / onshape-to-robot lineage).
 
-**Lucy schema note:** `servo_type` must be `180` / `270` / `300` (PWM-family field; SO-ARM uses `'300'` as a stand-in). Actuators are `board_class: bus_servo_only` → Rust crate `firmwares/rp2040_servo2040` (UART bus gated by YAML `HAS_BUS`). `physical_pin` is the STS3215 bus id. `firmware.source_dir` is `lucy_embedded_firmware`; UF2 target is `lucy_so_arm`.
+**Lucy schema note:** `servo_type` must be `180` / `270` / `300` (PWM-family field; SO-ARM uses `'300'` as a stand-in). Actuators are `board_class: bus_servo_only` → Rust crate `firmwares/rp2040_servo2040` (UART bus gated by YAML `HAS_BUS`). `physical_pin` is the STS3215 bus id. Optional board **`slave_address`** is the Modbus slave id on that board’s USB CDC (default `1`). `firmware.source_dir` is `lucy_embedded_firmware`; UF2 target is `lucy_so_arm`.
+
+Gazebo: stock `gz_ros2_control/GazeboSimSystem` ignores Lucy firmware-space `offset_rad` / `servo_*_rad` params on the gazebo xacro — joint limits come from the URDF. Those params are emitted for consistency with the HI ros2_control xacro, not because Gazebo applies them today.
 
 ---
 

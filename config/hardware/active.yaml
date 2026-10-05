@@ -19,6 +19,7 @@ boards:
   rp2040_so_arm:
     serial_id: ''
     board_class: bus_servo_only
+    # Modbus slave on this board USB CDC (independent of other boards).
     slave_address: 1
     internal_servo_slots: 6
     firmware_target: lucy_so_arm
@@ -30,11 +31,11 @@ boards:
       type: joint_trajectory_controller/JointTrajectoryController
 
 actuators:
-# Servo angles on the firmware scale (radians in YAML): 0–2π rad maps onto the
-# STS3215 0–4096 tick span (BusServoConfig / HAS_BUS on rp2040_servo2040), so
-# rad = ticks * 2π / 4096. Windows are the recorded LeRobot follower calibration;
-# offset_rad pi is the homed centre (2048 ticks), which the calibration puts at
-# joint zero.
+  # Servo angles on the firmware scale (radians in YAML): 0–2π rad maps onto the
+  # STS3215 0–4096 tick span (BusServoConfig / HAS_BUS on rp2040_servo2040), so
+  # rad = ticks * 2π / 4096. Windows are the recorded LeRobot follower calibration;
+  # offset_rad pi is the homed centre (2048 ticks), which the calibration puts at
+  # joint zero.
   # STS3215 smart bus servos. servo_type is the PWM-family field the schema still
   # requires; the generated xacro drives them through the bus_servo path.
   - id: rotation
