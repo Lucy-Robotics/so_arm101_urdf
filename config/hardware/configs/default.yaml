@@ -16,17 +16,16 @@ controller_manager:
   update_rate: 100
 
 boards:
-  # Feetech transport (SO-ARM101 keeps both options):
-  # - servo2040_uart (this profile): board_class bus_servo_only → rp2040_servo2040
-  #   HAS_BUS, UART0 half-duplex Feetech on GPIO0/1/2. Host still uses HI f64 SHM;
-  #   Modbus CDC on the board USB is transitional until SHM is wired into the UF2.
-  # - linux_feetech (m-brl): firmwares/linux mmaps the same SHM JointTable and
-  #   drives STS over USB serial — no Servo2040 required. Select via bringup /
-  #   package when that binary is the active consumer (do not delete this profile).
+  # Feetech transport notes (not YAML keys / not board_class values):
+  # - This profile: board_class bus_servo_only → rp2040_servo2040 HAS_BUS,
+  #   UART0 half-duplex Feetech on GPIO0/1/2, commanded today via Modbus CDC.
+  # - Alternate (WIP m-brl): host firmwares/linux USB-serial Feetech from f64 SHM;
+  #   selected by bringup/package when that binary exists — do not invent schema
+  #   fields named servo2040_uart / linux_feetech.
   rp2040_so_arm:
     serial_id: ''
     board_class: bus_servo_only
-    # Transitional Modbus slave on board USB CDC (independent of other boards).
+    # Modbus slave on board USB CDC (independent of other boards).
     slave_address: 1
     internal_servo_slots: 6
     firmware_target: lucy_so_arm
