@@ -12,8 +12,8 @@ joint_state_broadcaster:
 
 so_arm_controller:
   ros__parameters:
-    # Position-only interfaces: open-loop interpolation (no velocity state).
-    open_loop_control: true
+    # Position-only interfaces: interpolate from last command (no velocity state).
+    interpolate_from_desired_state: true
     allow_nonzero_velocity_at_trajectory_end: false
     joints:
       - Rotation

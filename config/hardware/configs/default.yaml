@@ -9,18 +9,26 @@ ignore_urdf_joints: []
 cameras: []
 
 firmware:
-  source_dir: micro_ros_raspberrypi_pico_sdk
-  build_dir: build
+  source_dir: lucy_embedded_firmware
+  build_dir: build/firmware
 
 controller_manager:
   update_rate: 100
 
 boards:
+  # Feetech transport notes (not YAML keys / not board_class values):
+  # - This profile: board_class bus_servo_only → rp2040_servo2040 HAS_BUS,
+  #   UART0 half-duplex Feetech on GPIO0/1/2, commanded today via Modbus CDC.
+  # - Alternate (WIP m-brl): host firmwares/linux USB-serial Feetech from f64 SHM;
+  #   selected by bringup/package when that binary exists — do not invent schema
+  #   fields named servo2040_uart / linux_feetech.
   rp2040_so_arm:
     serial_id: ''
     board_class: bus_servo_only
+    # Modbus slave on board USB CDC (independent of other boards).
+    slave_address: 1
     internal_servo_slots: 6
-    firmware_target: pico_micro_ros_so_arm
+    firmware_target: lucy_so_arm
     compile_definition: USE_SO_ARM
     topic_actuators: actuators/so_arm
     topic_sensors: sensors/so_arm
@@ -29,18 +37,25 @@ boards:
       type: joint_trajectory_controller/JointTrajectoryController
 
 actuators:
+  # Servo angles on the firmware scale (radians in YAML): 0–2π rad maps onto the
+  # STS3215 0–4096 tick span (BusServoConfig / HAS_BUS on rp2040_servo2040), so
+  # rad = ticks * 2π / 4096. Windows are the recorded LeRobot follower calibration;
+  # offset_rad pi is the homed centre (2048 ticks), which the calibration puts at
+  # joint zero.
+  # STS3215 smart bus servos. servo_type is the PWM-family field the schema still
+  # requires; the generated xacro drives them through the bus_servo path.
   - id: rotation
     urdf_joint: Rotation
     board: rp2040_so_arm
     virtual_pin: 0
     physical_pin: 1
     servo_type: '300'
-    offset_deg: 180
+    offset_rad: 3.14159
     direction: 1
     scale: 1
-    servo_min_deg: 62.31
-    servo_max_deg: 283.8
-    servo_default_deg: 180
+    servo_min_rad: 1.08759
+    servo_max_rad: 4.95322
+    servo_default_rad: 3.14159
     enabled: true
   - id: pitch
     urdf_joint: Pitch
@@ -48,12 +63,12 @@ actuators:
     virtual_pin: 1
     physical_pin: 2
     servo_type: '300'
-    offset_deg: 180
+    offset_rad: 3.14159
     direction: 1
     scale: 1
-    servo_min_deg: 73.65
-    servo_max_deg: 282.13
-    servo_default_deg: 180
+    servo_min_rad: 1.28548
+    servo_max_rad: 4.92408
+    servo_default_rad: 3.14159
     enabled: true
 
   - id: elbow
@@ -62,12 +77,12 @@ actuators:
     virtual_pin: 2
     physical_pin: 3
     servo_type: '300'
-    offset_deg: 180
+    offset_rad: 3.14159
     direction: 1
     scale: 1
-    servo_min_deg: 74.27
-    servo_max_deg: 271.14
-    servo_default_deg: 180
+    servo_min_rad: 1.29621
+    servo_max_rad: 4.73233
+    servo_default_rad: 3.14159
     enabled: true
   - id: wrist_pitch
     urdf_joint: Wrist_Pitch
@@ -75,12 +90,12 @@ actuators:
     virtual_pin: 3
     physical_pin: 4
     servo_type: '300'
-    offset_deg: 180
+    offset_rad: 3.14159
     direction: 1
     scale: 1
-    servo_min_deg: 70.14
-    servo_max_deg: 279.76
-    servo_default_deg: 180
+    servo_min_rad: 1.22412
+    servo_max_rad: 4.88266
+    servo_default_rad: 3.14159
     enabled: true
   - id: wrist_roll
     urdf_joint: Wrist_Roll
@@ -88,12 +103,12 @@ actuators:
     virtual_pin: 4
     physical_pin: 5
     servo_type: '300'
-    offset_deg: 180
+    offset_rad: 3.14159
     direction: 1
     scale: 1
-    servo_min_deg: 0
-    servo_max_deg: 359.91
-    servo_default_deg: 180
+    servo_min_rad: 0
+    servo_max_rad: 6.28165
+    servo_default_rad: 3.14159
     enabled: true
   - id: jaw
     urdf_joint: Jaw
@@ -101,12 +116,12 @@ actuators:
     virtual_pin: 5
     physical_pin: 6
     servo_type: '300'
-    offset_deg: 180
+    offset_rad: 3.14159
     direction: 1
     scale: 1
-    servo_min_deg: 178.68
-    servo_max_deg: 309.81
-    servo_default_deg: 180
+    servo_min_rad: 3.11858
+    servo_max_rad: 5.40728
+    servo_default_rad: 3.14159
     enabled: true
 
 sensors:
@@ -116,8 +131,8 @@ sensors:
     board: rp2040_so_arm
     virtual_pin: 0
     physical_pin: 1
-    min_value: 62.31
-    max_value: 283.8
+    min_value: 1.08759
+    max_value: 4.95322
     enabled: false
   - id: pitch_encoder
     type: encoder
@@ -125,8 +140,8 @@ sensors:
     board: rp2040_so_arm
     virtual_pin: 1
     physical_pin: 2
-    min_value: 73.65
-    max_value: 282.13
+    min_value: 1.28548
+    max_value: 4.92408
     enabled: false
   - id: elbow_encoder
     type: encoder
@@ -134,8 +149,8 @@ sensors:
     board: rp2040_so_arm
     virtual_pin: 2
     physical_pin: 3
-    min_value: 74.27
-    max_value: 271.14
+    min_value: 1.29621
+    max_value: 4.73233
     enabled: false
 
   - id: wrist_pitch_encoder
@@ -144,8 +159,8 @@ sensors:
     board: rp2040_so_arm
     virtual_pin: 3
     physical_pin: 4
-    min_value: 70.14
-    max_value: 279.76
+    min_value: 1.22412
+    max_value: 4.88266
     enabled: false
   - id: wrist_roll_encoder
     type: encoder
@@ -154,7 +169,7 @@ sensors:
     virtual_pin: 4
     physical_pin: 5
     min_value: 0
-    max_value: 359.91
+    max_value: 6.28165
     enabled: false
   - id: jaw_encoder
     type: encoder
@@ -162,6 +177,6 @@ sensors:
     board: rp2040_so_arm
     virtual_pin: 5
     physical_pin: 6
-    min_value: 178.68
-    max_value: 309.81
+    min_value: 3.11858
+    max_value: 5.40728
     enabled: false

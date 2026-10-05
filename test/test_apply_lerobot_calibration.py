@@ -38,35 +38,40 @@ def _load_module():
 mod = _load_module()
 
 
+def _yaml_g(value: float) -> float:
+    """Match ``apply_updates`` ``:g`` formatting after a YAML round-trip."""
+    return float(f'{value:g}')
+
+
 CONFIG = """\
 actuators:
   # A comment that must survive the rewrite.
   - id: rotation
     urdf_joint: Rotation
     physical_pin: 1
-    offset_deg: 200
+    offset_rad: 3.490659
     direction: 1
     scale: 1
-    servo_min_deg: 80
-    servo_max_deg: 320
-    servo_default_deg: 200
+    servo_min_rad: 1.396263
+    servo_max_rad: 5.585054
+    servo_default_rad: 3.490659
     enabled: true
   - id: jaw
     urdf_joint: Jaw
     physical_pin: 6
-    offset_deg: 137.5
+    offset_rad: 2.399828
     direction: -1
     scale: 1
-    servo_min_deg: 115
-    servo_max_deg: 250
-    servo_default_deg: 137.5
+    servo_min_rad: 2.007129
+    servo_max_rad: 4.363323
+    servo_default_rad: 2.399828
     enabled: true
 
 sensors:
   - id: rotation_encoder
     associated_actuator: rotation
-    min_value: 80
-    max_value: 320
+    min_value: 1.396263
+    max_value: 5.585054
     enabled: false
 """
 
@@ -88,29 +93,29 @@ def _apply(text=CONFIG, calibration=None, tmp_path=None):
     return mod.apply_to_file(path, calibration or CALIBRATION)
 
 
-def test_ticks_to_degrees_matches_the_firmware_scale():
-    """0-4096 ticks span 0-360 deg, so the centre is 180."""
-    assert mod.ticks_to_degrees(0) == 0
-    assert mod.ticks_to_degrees(4096) == 360
-    assert mod.ticks_to_degrees(2048) == 180
-    assert mod.ticks_to_degrees(768) == 67.5
+def test_ticks_to_radians_matches_the_firmware_scale():
+    """0-4096 ticks span 0-2π rad, so the centre is π."""
+    assert mod.ticks_to_radians(0) == 0.0
+    assert mod.ticks_to_radians(4096) == 6.283185
+    assert mod.ticks_to_radians(2048) == 3.141593
+    assert mod.ticks_to_radians(768) == 1.178097
 
 
 def test_windows_and_centre_are_written(tmp_path):
-    """Ranges convert to degrees and joint zero lands on the homed centre."""
+    """Ranges convert to radians and joint zero lands on the homed centre."""
     out, _ = _apply(tmp_path=tmp_path)
     actuators = {a['id']: a for a in yaml.safe_load(out)['actuators']}
 
     rotation = actuators['rotation']
-    assert rotation['servo_min_deg'] == 67.5
-    assert rotation['servo_max_deg'] == 287.67
-    assert rotation['offset_deg'] == 180
-    assert rotation['servo_default_deg'] == 180
+    assert rotation['servo_min_rad'] == _yaml_g(mod.ticks_to_radians(768))
+    assert rotation['servo_max_rad'] == _yaml_g(mod.ticks_to_radians(3273))
+    assert rotation['offset_rad'] == _yaml_g(mod.ticks_to_radians(2048))
+    assert rotation['servo_default_rad'] == _yaml_g(mod.ticks_to_radians(2048))
 
     # Not the midpoint of the window: the gripper's travel is far from symmetric.
     jaw = actuators['jaw']
-    assert jaw['servo_min_deg'] == 179.82
-    assert jaw['offset_deg'] == 180
+    assert jaw['servo_min_rad'] == _yaml_g(mod.ticks_to_radians(2046))
+    assert jaw['offset_rad'] == _yaml_g(mod.ticks_to_radians(2048))
 
 
 def test_matching_is_by_servo_id_not_name(tmp_path):
@@ -119,8 +124,8 @@ def test_matching_is_by_servo_id_not_name(tmp_path):
     actuators = {a['id']: a for a in yaml.safe_load(out)['actuators']}
     # 'gripper' (id 6) reached 'jaw' (physical_pin 6), not the alphabetically near
     # 'rotation'.
-    assert actuators['jaw']['servo_max_deg'] == mod.ticks_to_degrees(3277)
-    assert actuators['rotation']['servo_max_deg'] == mod.ticks_to_degrees(3273)
+    assert actuators['jaw']['servo_max_rad'] == _yaml_g(mod.ticks_to_radians(3277))
+    assert actuators['rotation']['servo_max_rad'] == _yaml_g(mod.ticks_to_radians(3273))
 
 
 def test_untouched_fields_and_comments_survive(tmp_path):
@@ -137,8 +142,8 @@ def test_sensor_bounds_follow_their_actuator(tmp_path):
     """Encoder bounds stay in the same space as the actuator they report on."""
     out, _ = _apply(tmp_path=tmp_path)
     sensor = yaml.safe_load(out)['sensors'][0]
-    assert sensor['min_value'] == 67.5
-    assert sensor['max_value'] == 287.67
+    assert sensor['min_value'] == _yaml_g(mod.ticks_to_radians(768))
+    assert sensor['max_value'] == _yaml_g(mod.ticks_to_radians(3273))
     assert sensor['enabled'] is False
 
 
@@ -174,7 +179,7 @@ def test_actuator_without_a_record_is_left_alone(tmp_path):
     out, warnings = _apply(calibration={'gripper': CALIBRATION['gripper']},
                            tmp_path=tmp_path)
     actuators = {a['id']: a for a in yaml.safe_load(out)['actuators']}
-    assert actuators['rotation']['servo_min_deg'] == 80
+    assert actuators['rotation']['servo_min_rad'] == 1.396263
     assert any('rotation' in w for w in warnings)
 
 
@@ -219,6 +224,11 @@ def test_real_config_round_trips():
     out, warnings = mod.apply_to_file(active, REAL_CALIBRATION)
     assert out == active.read_text(encoding='utf-8')
     assert not warnings
+    default = ROOT / 'config/hardware/configs/default.yaml'
+    out_default, warnings_default = mod.apply_to_file(default, REAL_CALIBRATION)
+    assert out_default == default.read_text(encoding='utf-8')
+    assert not warnings_default
+    assert active.read_text(encoding='utf-8') == default.read_text(encoding='utf-8')
 
 
 def test_main_is_self_sufficient_for_the_real_package(tmp_path, capsys):

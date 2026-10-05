@@ -27,6 +27,7 @@ Usage::
 
 from __future__ import annotations
 
+import math
 import argparse
 import json
 import re
@@ -35,10 +36,8 @@ from pathlib import Path
 
 import yaml
 
-# The firmware maps 0-360 deg linearly onto the servo's 0-4096 tick span,
-# so a "degree" in the hardware YAML is just a tick in another unit.
+# Firmware / YAML map 0–2π rad linearly onto the STS3215 0–4096 tick span.
 TICKS_PER_TURN = 4096
-DEGREES_PER_TURN = 360
 # Calibration centres every joint here, which is what makes it joint zero.
 CENTRE_TICKS = TICKS_PER_TURN // 2
 
@@ -49,9 +48,9 @@ class CalibrationError(RuntimeError):
     """A calibration that cannot be applied to this config."""
 
 
-def ticks_to_degrees(ticks: float) -> float:
-    """Convert raw encoder ticks to the degrees the hardware YAML stores."""
-    return round(ticks * DEGREES_PER_TURN / TICKS_PER_TURN, 2)
+def ticks_to_radians(ticks: float) -> float:
+    """Convert raw encoder ticks to radians stored in the hardware YAML."""
+    return round(ticks * (2.0 * math.pi) / TICKS_PER_TURN, 6)
 
 
 def load_calibration(path: Path) -> dict[str, dict]:
@@ -94,7 +93,7 @@ def plan(calibration: dict[str, dict], config: dict) -> tuple[dict, list[str]]:
         if pin is not None:
             by_pin.setdefault(int(pin), []).append(actuator)
 
-    centre = ticks_to_degrees(CENTRE_TICKS)
+    centre = ticks_to_radians(CENTRE_TICKS)
     for motor, record in sorted(calibration.items(), key=lambda kv: kv[1]["id"]):
         servo_id = int(record["id"])
         matched = by_pin.get(servo_id, [])
@@ -118,10 +117,10 @@ def plan(calibration: dict[str, dict], config: dict) -> tuple[dict, list[str]]:
                 f"check {actuator_id} against the 3D view."
             )
         fields = {
-            "offset_deg": centre,
-            "servo_min_deg": ticks_to_degrees(record["range_min"]),
-            "servo_max_deg": ticks_to_degrees(record["range_max"]),
-            "servo_default_deg": centre,
+            "offset_rad": centre,
+            "servo_min_rad": ticks_to_radians(record["range_min"]),
+            "servo_max_rad": ticks_to_radians(record["range_max"]),
+            "servo_default_rad": centre,
         }
         updates[actuator_id] = fields
 
@@ -141,8 +140,8 @@ def sensor_updates(config: dict, updates: dict[str, dict]) -> dict[str, dict]:
         actuator = str(sensor.get("associated_actuator", ""))
         if actuator in updates:
             out[str(sensor["id"])] = {
-                "min_value": updates[actuator]["servo_min_deg"],
-                "max_value": updates[actuator]["servo_max_deg"],
+                "min_value": updates[actuator]["servo_min_rad"],
+                "max_value": updates[actuator]["servo_max_rad"],
             }
     return out
 
