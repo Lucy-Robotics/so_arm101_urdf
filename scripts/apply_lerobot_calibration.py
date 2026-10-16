@@ -28,14 +28,18 @@ tick 2048 (π rad on Lucy's 0–2π ↔ 0–4096 map). That pose is the URDF def
 The hardware interface maps joint commands → servo with the inverse, and
 publishes joint_states in joint space so the 3D view matches the real arm.
 
-Usage::
-    cd src/so_arm101_urdf
-    scripts/apply_lerobot_calibration.py \
+Usage (from ``lucy_ws`` root)::
+
+    src/so_arm101_urdf/scripts/apply_lerobot_calibration.py \\
         ~/.cache/huggingface/lerobot/calibration/robots/so_follower/<arm>.json
 
-    scripts/apply_lerobot_calibration.py cal.json --dry-run
-    scripts/apply_lerobot_calibration.py cal.json --config path/to/other.yaml
-    scripts/apply_lerobot_calibration.py cal.json --no-urdf
+Writes ``config/hardware/configs/my_custom_so101_config.yaml`` (stock
+``default.yaml`` is left untouched), mirrors it to ``active.yaml``, and points
+``active_meta.yaml`` at that preset. Override the name with ``--preset-name``.
+
+    ... cal.json --dry-run
+    ... cal.json --config path/to/other.yaml
+    ... cal.json --no-urdf
 """
 
 from __future__ import annotations
@@ -45,6 +49,8 @@ import argparse
 import json
 import re
 import sys
+from datetime import datetime
+from datetime import timezone
 from pathlib import Path
 
 import yaml
@@ -56,6 +62,8 @@ CENTRE_TICKS = TICKS_PER_TURN // 2
 
 REQUIRED_RECORD_KEYS = ("id", "range_min", "range_max")
 DEFAULT_URDF_REL = Path("description/robot_description/urdf/robot_description.urdf.xacro")
+DEFAULT_PRESET_NAME = "my_custom_so101_config"
+STOCK_PRESET_NAME = "default"
 
 
 class CalibrationError(RuntimeError):
@@ -242,19 +250,27 @@ def apply_urdf_limits(text: str, limits: dict[str, tuple[float, float]]) -> str:
     return text
 
 
-def default_targets(package_root: Path) -> list[Path]:
-    """Return the active config, plus the preset behind it, so re-activation keeps this."""
-    targets = [package_root / "config/hardware/active.yaml"]
+def template_config(package_root: Path) -> Path:
+    """Stock template to read (never written by the default apply path)."""
+    stock = package_root / "config/hardware/configs" / f"{STOCK_PRESET_NAME}.yaml"
+    if stock.is_file():
+        return stock
+    return package_root / "config/hardware/active.yaml"
+
+
+def preset_path(package_root: Path, preset_name: str) -> Path:
+    return package_root / "config/hardware/configs" / f"{preset_name}.yaml"
+
+
+def write_active_meta(package_root: Path, preset_name: str) -> None:
     meta = package_root / "config/hardware/active_meta.yaml"
-    try:
-        name = (yaml.safe_load(meta.read_text(encoding="utf-8")) or {}).get("name")
-    except (OSError, yaml.YAMLError):
-        return targets
-    if isinstance(name, str) and name.strip():
-        preset = package_root / "config/hardware/configs" / f"{name.strip()}.yaml"
-        if preset.exists():
-            targets.append(preset)
-    return targets
+    payload = {
+        "name": preset_name,
+        "activated_at": datetime.now(timezone.utc)
+        .isoformat(timespec="microseconds")
+        .replace("+00:00", "Z"),
+    }
+    meta.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
 
 
 def apply_to_file(
@@ -271,15 +287,30 @@ def apply_to_file(
 def main(argv: list[str] | None = None) -> int:
     """Apply the calibration named on the command line, or report why it cannot be."""
     parser = argparse.ArgumentParser(
-        description="Apply LeRobot calibration to Lucy hardware YAML and URDF limits.",
+        description=(
+            "Apply LeRobot calibration to a new Lucy hardware preset "
+            f"(default name: {DEFAULT_PRESET_NAME}; never overwrites "
+            f"configs/{STOCK_PRESET_NAME}.yaml)."
+        ),
     )
     parser.add_argument("calibration", type=Path, help="lerobot-calibrate JSON")
+    parser.add_argument(
+        "--preset-name",
+        default=DEFAULT_PRESET_NAME,
+        help=(
+            f"new preset basename under config/hardware/configs/ "
+            f"(default: {DEFAULT_PRESET_NAME}; refused if '{STOCK_PRESET_NAME}')"
+        ),
+    )
     parser.add_argument(
         "--config",
         type=Path,
         action="append",
         dest="configs",
-        help="hardware YAML to patch (repeatable; default: active.yaml + its preset)",
+        help=(
+            "explicit hardware YAML to patch in place (repeatable; skips "
+            "creating a new preset / updating active_meta)"
+        ),
     )
     parser.add_argument(
         "--urdf",
@@ -300,13 +331,29 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     package_root = Path(__file__).resolve().parents[1]
-    targets = args.configs or default_targets(package_root)
     urdf_path = None if args.no_urdf else (args.urdf or package_root / DEFAULT_URDF_REL)
+    preset_name = str(args.preset_name).strip()
+    use_new_preset = not args.configs
 
     try:
+        if use_new_preset:
+            if not preset_name or "/" in preset_name or preset_name == STOCK_PRESET_NAME:
+                raise CalibrationError(
+                    f"invalid --preset-name {preset_name!r}: use a basename other "
+                    f"than {STOCK_PRESET_NAME!r}"
+                )
+            source = template_config(package_root)
+            if not source.is_file():
+                raise CalibrationError(f"template config not found: {source}")
+            dest_preset = preset_path(package_root, preset_name)
+            active = package_root / "config/hardware/active.yaml"
+            write_paths = [dest_preset, active]
+        else:
+            write_paths = list(args.configs)
+            source = write_paths[0]
+
         calibration = load_calibration(args.calibration)
-        results = [(path, *apply_to_file(path, calibration)) for path in targets]
-        urdf_limits = results[0][2] if results else {}
+        new_text, urdf_limits, warnings = apply_to_file(source, calibration)
         new_urdf = None
         if urdf_path is not None:
             if not urdf_path.is_file():
@@ -316,19 +363,41 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {e}", file=sys.stderr)
         return 1
 
-    for message in dict.fromkeys(w for _, _, _, warns in results for w in warns):
+    for message in dict.fromkeys(warnings):
         print(f"warning: {message}", file=sys.stderr)
 
-    for path, new_text, _, _ in results:
-        unchanged = new_text == path.read_text(encoding="utf-8")
+    if use_new_preset:
+        print(f"template: {source}")
+
+    for path in write_paths:
+        if path.name == f"{STOCK_PRESET_NAME}.yaml" and path.parent.name == "configs":
+            print(
+                f"error: refusing to overwrite stock preset {path}",
+                file=sys.stderr,
+            )
+            return 1
+        exists = path.is_file()
+        unchanged = exists and new_text == path.read_text(encoding="utf-8")
         if args.dry_run:
-            print(f"{path}: {'no change' if unchanged else 'would be updated'}")
+            if not exists:
+                print(f"{path}: would be created")
+            else:
+                print(f"{path}: {'no change' if unchanged else 'would be updated'}")
             continue
+        path.parent.mkdir(parents=True, exist_ok=True)
         if unchanged:
             print(f"{path}: already up to date")
         else:
             path.write_text(new_text, encoding="utf-8")
-            print(f"{path}: updated")
+            print(f"{path}: {'created' if not exists else 'updated'}")
+
+    if use_new_preset:
+        meta = package_root / "config/hardware/active_meta.yaml"
+        if args.dry_run:
+            print(f"{meta}: would set name={preset_name!r}")
+        else:
+            write_active_meta(package_root, preset_name)
+            print(f"{meta}: name={preset_name!r}")
 
     if urdf_path is not None and new_urdf is not None:
         unchanged = new_urdf == urdf_path.read_text(encoding="utf-8")
@@ -343,8 +412,8 @@ def main(argv: list[str] | None = None) -> int:
     if not args.dry_run:
         print(
             "\nRegenerate the package configs so the new windows reach the "
-            "ros2_control and gazebo xacros (see DEVELOPER.md), then restart "
-            "the stack with real:=true."
+            "ros2_control and gazebo xacros (see REAL_HARDWARE_SETUP.md), then "
+            "restart the stack with real:=true."
         )
     return 0
 

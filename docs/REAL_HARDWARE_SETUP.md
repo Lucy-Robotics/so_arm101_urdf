@@ -31,7 +31,9 @@ src/so_arm101_urdf/scripts/apply_lerobot_calibration.py \
   ~/.cache/huggingface/lerobot/calibration/robots/so_follower/my_follower_arm.json
 ```
 
-Do not commit one-arm limits into `configs/default.yaml` — copy the preset to a personal file under `src/so_arm101_urdf/config/hardware/configs/` if you need to keep it.
+Writes `src/so_arm101_urdf/config/hardware/configs/my_custom_so101_config.yaml`
+(and activates it). Stock `default.yaml` is not modified. Optional:
+`--preset-name other_name`.
 
 ## 4. Regenerate
 

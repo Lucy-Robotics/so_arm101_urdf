@@ -281,13 +281,25 @@ def test_real_config_round_trips(tmp_path):
 
 
 def test_main_is_self_sufficient_for_the_real_package(tmp_path, capsys):
-    """One invocation covers active.yaml, its preset, and the URDF limits."""
+    """Default path creates my_custom_so101_config and leaves default.yaml alone."""
     cal_path = tmp_path / 'cal.json'
     cal_path.write_text(json.dumps(REAL_CALIBRATION), encoding='utf-8')
     rc = mod.main([str(cal_path), '--dry-run'])
     out = capsys.readouterr().out
     assert rc == 0
-    assert 'active.yaml:' in out
+    assert 'my_custom_so101_config.yaml' in out
+    assert 'active.yaml' in out
+    assert 'active_meta.yaml' in out
     assert 'robot_description.urdf.xacro:' in out
+    assert 'configs/default.yaml' not in out or 'template:' in out
     # Generated ros2_control xacro is not patched here (regenerate step owns it).
     assert 'so_arm101_ros2_control.xacro' not in out
+
+
+def test_main_refuses_stock_preset_name(tmp_path, capsys):
+    cal = tmp_path / 'cal.json'
+    cal.write_text(json.dumps(REAL_CALIBRATION), encoding='utf-8')
+    rc = mod.main([str(cal), '--preset-name', 'default', '--dry-run'])
+    err = capsys.readouterr().err
+    assert rc == 1
+    assert 'default' in err
