@@ -49,22 +49,22 @@ actuators:
   - id: rotation
     urdf_joint: Rotation
     physical_pin: 1
-    offset_rad: 3.490659
+    offset: 3.490659
     direction: 1
     scale: 1
-    servo_min_rad: 1.396263
-    servo_max_rad: 5.585054
-    servo_default_rad: 3.490659
+    limit_min: 1.396263
+    limit_max: 5.585054
+    default: 3.490659
     enabled: true
   - id: jaw
     urdf_joint: Jaw
     physical_pin: 6
-    offset_rad: 2.399828
+    offset: 2.399828
     direction: -1
     scale: 1
-    servo_min_rad: 2.007129
-    servo_max_rad: 4.363323
-    servo_default_rad: 2.399828
+    limit_min: 2.007129
+    limit_max: 4.363323
+    default: 2.399828
     enabled: true
 
 sensors:
@@ -107,15 +107,15 @@ def test_windows_and_centre_are_written(tmp_path):
     actuators = {a['id']: a for a in yaml.safe_load(out)['actuators']}
 
     rotation = actuators['rotation']
-    assert rotation['servo_min_rad'] == _yaml_g(mod.ticks_to_radians(768))
-    assert rotation['servo_max_rad'] == _yaml_g(mod.ticks_to_radians(3273))
-    assert rotation['offset_rad'] == _yaml_g(mod.ticks_to_radians(2048))
-    assert rotation['servo_default_rad'] == _yaml_g(mod.ticks_to_radians(2048))
+    assert rotation['limit_min'] == _yaml_g(mod.ticks_to_radians(768))
+    assert rotation['limit_max'] == _yaml_g(mod.ticks_to_radians(3273))
+    assert rotation['offset'] == _yaml_g(mod.ticks_to_radians(2048))
+    assert rotation['default'] == _yaml_g(mod.ticks_to_radians(2048))
 
     # Not the midpoint of the window: the gripper's travel is far from symmetric.
     jaw = actuators['jaw']
-    assert jaw['servo_min_rad'] == _yaml_g(mod.ticks_to_radians(2046))
-    assert jaw['offset_rad'] == _yaml_g(mod.ticks_to_radians(2048))
+    assert jaw['limit_min'] == _yaml_g(mod.ticks_to_radians(2046))
+    assert jaw['offset'] == _yaml_g(mod.ticks_to_radians(2048))
 
 
 def test_matching_is_by_servo_id_not_name(tmp_path):
@@ -124,8 +124,8 @@ def test_matching_is_by_servo_id_not_name(tmp_path):
     actuators = {a['id']: a for a in yaml.safe_load(out)['actuators']}
     # 'gripper' (id 6) reached 'jaw' (physical_pin 6), not the alphabetically near
     # 'rotation'.
-    assert actuators['jaw']['servo_max_rad'] == _yaml_g(mod.ticks_to_radians(3277))
-    assert actuators['rotation']['servo_max_rad'] == _yaml_g(mod.ticks_to_radians(3273))
+    assert actuators['jaw']['limit_max'] == _yaml_g(mod.ticks_to_radians(3277))
+    assert actuators['rotation']['limit_max'] == _yaml_g(mod.ticks_to_radians(3273))
 
 
 def test_untouched_fields_and_comments_survive(tmp_path):
@@ -179,7 +179,7 @@ def test_actuator_without_a_record_is_left_alone(tmp_path):
     out, warnings = _apply(calibration={'gripper': CALIBRATION['gripper']},
                            tmp_path=tmp_path)
     actuators = {a['id']: a for a in yaml.safe_load(out)['actuators']}
-    assert actuators['rotation']['servo_min_rad'] == 1.396263
+    assert actuators['rotation']['limit_min'] == 1.396263
     assert any('rotation' in w for w in warnings)
 
 

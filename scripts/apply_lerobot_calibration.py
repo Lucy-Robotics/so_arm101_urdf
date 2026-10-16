@@ -117,10 +117,10 @@ def plan(calibration: dict[str, dict], config: dict) -> tuple[dict, list[str]]:
                 f"check {actuator_id} against the 3D view."
             )
         fields = {
-            "offset_rad": centre,
-            "servo_min_rad": ticks_to_radians(record["range_min"]),
-            "servo_max_rad": ticks_to_radians(record["range_max"]),
-            "servo_default_rad": centre,
+            "offset": centre,
+            "limit_min": ticks_to_radians(record["range_min"]),
+            "limit_max": ticks_to_radians(record["range_max"]),
+            "default": centre,
         }
         updates[actuator_id] = fields
 
@@ -140,8 +140,8 @@ def sensor_updates(config: dict, updates: dict[str, dict]) -> dict[str, dict]:
         actuator = str(sensor.get("associated_actuator", ""))
         if actuator in updates:
             out[str(sensor["id"])] = {
-                "min_value": updates[actuator]["servo_min_rad"],
-                "max_value": updates[actuator]["servo_max_rad"],
+                "min_value": updates[actuator]["limit_min"],
+                "max_value": updates[actuator]["limit_max"],
             }
     return out
 
