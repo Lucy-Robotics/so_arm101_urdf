@@ -14,15 +14,28 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-Apply a LeRobot follower calibration to the Lucy hardware config.
+Apply a LeRobot follower calibration to the Lucy hardware config + URDF limits.
+
+LeRobot's half-turn homing makes the pose you hold during calibration read as
+tick 2048 (π rad on Lucy's 0–2π ↔ 0–4096 map). That pose is the URDF default
+(joint 0). Lucy therefore stores:
+
+* ``offset`` / ``default`` = π (servo-frame centre)
+* ``limit_min`` / ``limit_max`` = travel window in servo-frame radians
+* URDF ``lower`` / ``upper`` = the same window mapped to joint space:
+  ``joint = (servo - offset) * direction * scale``
+
+The hardware interface maps joint commands → servo with the inverse, and
+publishes joint_states in joint space so the 3D view matches the real arm.
 
 Usage::
     cd src/so_arm101_urdf
     scripts/apply_lerobot_calibration.py \
-        ~/.cache/huggingface/lerobot/calibration/robots/so101_follower/<arm>.json
+        ~/.cache/huggingface/lerobot/calibration/robots/so_follower/<arm>.json
 
     scripts/apply_lerobot_calibration.py cal.json --dry-run
     scripts/apply_lerobot_calibration.py cal.json --config path/to/other.yaml
+    scripts/apply_lerobot_calibration.py cal.json --no-urdf
 """
 
 from __future__ import annotations
@@ -38,10 +51,11 @@ import yaml
 
 # Firmware / YAML map 0–2π rad linearly onto the STS3215 0–4096 tick span.
 TICKS_PER_TURN = 4096
-# Calibration centres every joint here, which is what makes it joint zero.
+# LeRobot half-turn homing centres Present_Position here (= URDF joint 0).
 CENTRE_TICKS = TICKS_PER_TURN // 2
 
 REQUIRED_RECORD_KEYS = ("id", "range_min", "range_max")
+DEFAULT_URDF_REL = Path("description/robot_description/urdf/robot_description.urdf.xacro")
 
 
 class CalibrationError(RuntimeError):
@@ -51,6 +65,23 @@ class CalibrationError(RuntimeError):
 def ticks_to_radians(ticks: float) -> float:
     """Convert raw encoder ticks to radians stored in the hardware YAML."""
     return round(ticks * (2.0 * math.pi) / TICKS_PER_TURN, 6)
+
+
+def servo_window_to_joint_limits(
+    limit_min: float,
+    limit_max: float,
+    offset: float,
+    direction: float,
+    scale: float,
+) -> tuple[float, float]:
+    """Map a servo-frame travel window to URDF joint lower/upper (sorted)."""
+    denom = direction * scale
+    if denom == 0:
+        raise CalibrationError("direction*scale must be non-zero")
+    a = (limit_min - offset) * denom
+    b = (limit_max - offset) * denom
+    lo, hi = (a, b) if a <= b else (b, a)
+    return round(lo, 6), round(hi, 6)
 
 
 def load_calibration(path: Path) -> dict[str, dict]:
@@ -76,16 +107,20 @@ def load_calibration(path: Path) -> dict[str, dict]:
     return data
 
 
-def plan(calibration: dict[str, dict], config: dict) -> tuple[dict, list[str]]:
+def plan(
+    calibration: dict[str, dict], config: dict
+) -> tuple[dict, dict[str, tuple[float, float]], list[str]]:
     """
     Pair calibration records with actuators by servo id, and derive their values.
 
-    Returns the per-actuator-id field updates plus any warnings worth printing.
-    Raises when a record matches no actuator or two actuators share its id.
+    Returns per-actuator YAML field updates, per-``urdf_joint`` limit pairs, and
+    warnings. Raises when a record matches no actuator or two actuators share
+    its id.
     """
     actuators = config.get("actuators") or []
     warnings: list[str] = []
     updates: dict[str, dict[str, float]] = {}
+    urdf_limits: dict[str, tuple[float, float]] = {}
 
     by_pin: dict[int, list[dict]] = {}
     for actuator in actuators:
@@ -116,13 +151,23 @@ def plan(calibration: dict[str, dict], config: dict) -> tuple[dict, list[str]]:
                 f"this joint inverted. direction is left at its current value; "
                 f"check {actuator_id} against the 3D view."
             )
+        limit_min = ticks_to_radians(record["range_min"])
+        limit_max = ticks_to_radians(record["range_max"])
         fields = {
             "offset": centre,
-            "limit_min": ticks_to_radians(record["range_min"]),
-            "limit_max": ticks_to_radians(record["range_max"]),
+            "limit_min": limit_min,
+            "limit_max": limit_max,
             "default": centre,
         }
         updates[actuator_id] = fields
+
+        urdf_joint = str(actuator.get("urdf_joint") or "").strip()
+        if urdf_joint:
+            direction = float(actuator.get("direction", 1))
+            scale = float(actuator.get("scale", 1))
+            urdf_limits[urdf_joint] = servo_window_to_joint_limits(
+                limit_min, limit_max, centre, direction, scale
+            )
 
     unmatched = [str(a["id"]) for a in actuators if str(a["id"]) not in updates]
     if unmatched:
@@ -130,7 +175,7 @@ def plan(calibration: dict[str, dict], config: dict) -> tuple[dict, list[str]]:
             f"no calibration record for: {', '.join(sorted(unmatched))} "
             f"(left untouched)"
         )
-    return updates, warnings
+    return updates, urdf_limits, warnings
 
 
 def sensor_updates(config: dict, updates: dict[str, dict]) -> dict[str, dict]:
@@ -172,6 +217,31 @@ def apply_updates(text: str, updates: dict[str, dict]) -> str:
     return text
 
 
+def apply_urdf_limits(text: str, limits: dict[str, tuple[float, float]]) -> str:
+    """Rewrite ``<limit ... lower= upper=>`` on named joints; keep other attrs."""
+    for joint, (lo, hi) in limits.items():
+        pattern = (
+            rf'(<joint\s+name="{re.escape(joint)}"[^>]*>.*?'
+            rf'<limit\b)([^>]*)(/>)'
+        )
+
+        def _rewrite(match: re.Match[str], *, lower: float = lo, upper: float = hi) -> str:
+            attrs = match.group(2)
+            attrs, n_lo = re.subn(r'\blower="[^"]*"', f'lower="{lower:g}"', attrs)
+            attrs, n_hi = re.subn(r'\bupper="[^"]*"', f'upper="{upper:g}"', attrs)
+            if n_lo != 1 or n_hi != 1:
+                raise CalibrationError(
+                    f'joint {joint!r}: expected one lower and one upper on <limit>, '
+                    f"found lower={n_lo} upper={n_hi}"
+                )
+            return f"{match.group(1)}{attrs}{match.group(3)}"
+
+        text, count = re.subn(pattern, _rewrite, text, count=1, flags=re.S)
+        if count != 1:
+            raise CalibrationError(f"joint {joint!r}: no <limit> found in URDF xacro")
+    return text
+
+
 def default_targets(package_root: Path) -> list[Path]:
     """Return the active config, plus the preset behind it, so re-activation keeps this."""
     targets = [package_root / "config/hardware/active.yaml"]
@@ -187,18 +257,22 @@ def default_targets(package_root: Path) -> list[Path]:
     return targets
 
 
-def apply_to_file(path: Path, calibration: dict[str, dict]) -> tuple[str, list[str]]:
-    """Return the rewritten text for one config, plus its warnings."""
+def apply_to_file(
+    path: Path, calibration: dict[str, dict]
+) -> tuple[str, dict[str, tuple[float, float]], list[str]]:
+    """Return rewritten YAML text, URDF limit map, and warnings."""
     text = path.read_text(encoding="utf-8")
     config = yaml.safe_load(text) or {}
-    updates, warnings = plan(calibration, config)
+    updates, urdf_limits, warnings = plan(calibration, config)
     updates.update(sensor_updates(config, updates))
-    return apply_updates(text, updates), warnings
+    return apply_updates(text, updates), urdf_limits, warnings
 
 
 def main(argv: list[str] | None = None) -> int:
     """Apply the calibration named on the command line, or report why it cannot be."""
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
+    parser = argparse.ArgumentParser(
+        description="Apply LeRobot calibration to Lucy hardware YAML and URDF limits.",
+    )
     parser.add_argument("calibration", type=Path, help="lerobot-calibrate JSON")
     parser.add_argument(
         "--config",
@@ -206,6 +280,17 @@ def main(argv: list[str] | None = None) -> int:
         action="append",
         dest="configs",
         help="hardware YAML to patch (repeatable; default: active.yaml + its preset)",
+    )
+    parser.add_argument(
+        "--urdf",
+        type=Path,
+        default=None,
+        help=f"URDF xacro to patch joint limits (default: {DEFAULT_URDF_REL})",
+    )
+    parser.add_argument(
+        "--no-urdf",
+        action="store_true",
+        help="do not rewrite URDF joint lower/upper from the calibration window",
     )
     parser.add_argument(
         "--dry-run",
@@ -216,18 +301,25 @@ def main(argv: list[str] | None = None) -> int:
 
     package_root = Path(__file__).resolve().parents[1]
     targets = args.configs or default_targets(package_root)
+    urdf_path = None if args.no_urdf else (args.urdf or package_root / DEFAULT_URDF_REL)
 
     try:
         calibration = load_calibration(args.calibration)
         results = [(path, *apply_to_file(path, calibration)) for path in targets]
+        urdf_limits = results[0][2] if results else {}
+        new_urdf = None
+        if urdf_path is not None:
+            if not urdf_path.is_file():
+                raise CalibrationError(f"URDF not found: {urdf_path}")
+            new_urdf = apply_urdf_limits(urdf_path.read_text(encoding="utf-8"), urdf_limits)
     except CalibrationError as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
 
-    for message in dict.fromkeys(w for _, _, warns in results for w in warns):
+    for message in dict.fromkeys(w for _, _, _, warns in results for w in warns):
         print(f"warning: {message}", file=sys.stderr)
 
-    for path, new_text, _ in results:
+    for path, new_text, _, _ in results:
         unchanged = new_text == path.read_text(encoding="utf-8")
         if args.dry_run:
             print(f"{path}: {'no change' if unchanged else 'would be updated'}")
@@ -238,11 +330,21 @@ def main(argv: list[str] | None = None) -> int:
             path.write_text(new_text, encoding="utf-8")
             print(f"{path}: updated")
 
+    if urdf_path is not None and new_urdf is not None:
+        unchanged = new_urdf == urdf_path.read_text(encoding="utf-8")
+        if args.dry_run:
+            print(f"{urdf_path}: {'no change' if unchanged else 'would be updated'}")
+        elif unchanged:
+            print(f"{urdf_path}: already up to date")
+        else:
+            urdf_path.write_text(new_urdf, encoding="utf-8")
+            print(f"{urdf_path}: updated")
+
     if not args.dry_run:
         print(
             "\nRegenerate the package configs so the new windows reach the "
             "ros2_control and gazebo xacros (see DEVELOPER.md), then restart "
-            "the stack."
+            "the stack with real:=true."
         )
     return 0
 
