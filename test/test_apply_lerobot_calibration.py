@@ -248,20 +248,35 @@ REAL_CALIBRATION = {
 }
 
 
-def test_real_config_round_trips():
-    """The committed config is what this tool produces from the recorded ticks."""
+def test_real_config_round_trips(tmp_path):
+    """Applying the recorded ticks is idempotent on a copy of the stock config.
+
+    Stock ``default.yaml`` / ``active.yaml`` stay as a generic template — they are
+    not required to already equal one arm's LeRobot window.
+    """
     active = ROOT / 'config/hardware/active.yaml'
-    out, urdf_limits, warnings = mod.apply_to_file(active, REAL_CALIBRATION)
-    assert out == active.read_text(encoding='utf-8')
+    default = ROOT / 'config/hardware/configs/default.yaml'
+    assert active.read_text(encoding='utf-8') == default.read_text(encoding='utf-8')
+
+    copy = tmp_path / 'active.yaml'
+    copy.write_text(active.read_text(encoding='utf-8'), encoding='utf-8')
+    out, urdf_limits, warnings = mod.apply_to_file(copy, REAL_CALIBRATION)
     assert not warnings
     assert set(urdf_limits) == {
         'Rotation', 'Pitch', 'Elbow', 'Wrist_Pitch', 'Wrist_Roll', 'Jaw',
     }
-    default = ROOT / 'config/hardware/configs/default.yaml'
-    out_default, _, warnings_default = mod.apply_to_file(default, REAL_CALIBRATION)
-    assert out_default == default.read_text(encoding='utf-8')
-    assert not warnings_default
-    assert active.read_text(encoding='utf-8') == default.read_text(encoding='utf-8')
+    assert out != active.read_text(encoding='utf-8')
+    copy.write_text(out, encoding='utf-8')
+    out2, _, warnings2 = mod.apply_to_file(copy, REAL_CALIBRATION)
+    assert out2 == out
+    assert not warnings2
+
+    # Spot-check Rotation window from REAL_CALIBRATION shoulder_pan ticks.
+    data = yaml.safe_load(out)
+    rotation = next(a for a in data['actuators'] if a['id'] == 'rotation')
+    assert rotation['limit_min'] == _yaml_g(mod.ticks_to_radians(867))
+    assert rotation['limit_max'] == _yaml_g(mod.ticks_to_radians(3274))
+    assert rotation['offset'] == _yaml_g(mod.ticks_to_radians(2048))
 
 
 def test_main_is_self_sufficient_for_the_real_package(tmp_path, capsys):
