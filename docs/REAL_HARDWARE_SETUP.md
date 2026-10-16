@@ -47,8 +47,5 @@ pixi run firmware-build-linux
 
 ## 6. Run
 
-```bash
-LUCY_ROBOT_PACKAGE=so_arm101_urdf pixi run core -- real:=true
-```
-
-Control panel → **Control Robot ON** → move joints.
+Control panel (robot package `so_arm101_urdf`, real hardware): start the stack →
+**Control Robot ON** → move joints.
