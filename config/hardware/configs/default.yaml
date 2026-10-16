@@ -50,12 +50,12 @@ actuators:
     virtual_pin: 0
     physical_pin: 1
     servo_type: '300'
-    offset_rad: 3.14159
+    offset: 3.14159
     direction: 1
     scale: 1
-    servo_min_rad: 1.08759
-    servo_max_rad: 4.95322
-    servo_default_rad: 3.14159
+    limit_min: 1.08759
+    limit_max: 4.95322
+    default: 3.14159
     enabled: true
   - id: pitch
     urdf_joint: Pitch
@@ -63,12 +63,12 @@ actuators:
     virtual_pin: 1
     physical_pin: 2
     servo_type: '300'
-    offset_rad: 3.14159
+    offset: 3.14159
     direction: 1
     scale: 1
-    servo_min_rad: 1.28548
-    servo_max_rad: 4.92408
-    servo_default_rad: 3.14159
+    limit_min: 1.28548
+    limit_max: 4.92408
+    default: 3.14159
     enabled: true
 
   - id: elbow
@@ -77,12 +77,12 @@ actuators:
     virtual_pin: 2
     physical_pin: 3
     servo_type: '300'
-    offset_rad: 3.14159
+    offset: 3.14159
     direction: 1
     scale: 1
-    servo_min_rad: 1.29621
-    servo_max_rad: 4.73233
-    servo_default_rad: 3.14159
+    limit_min: 1.29621
+    limit_max: 4.73233
+    default: 3.14159
     enabled: true
   - id: wrist_pitch
     urdf_joint: Wrist_Pitch
@@ -90,12 +90,12 @@ actuators:
     virtual_pin: 3
     physical_pin: 4
     servo_type: '300'
-    offset_rad: 3.14159
+    offset: 3.14159
     direction: 1
     scale: 1
-    servo_min_rad: 1.22412
-    servo_max_rad: 4.88266
-    servo_default_rad: 3.14159
+    limit_min: 1.22412
+    limit_max: 4.88266
+    default: 3.14159
     enabled: true
   - id: wrist_roll
     urdf_joint: Wrist_Roll
@@ -103,12 +103,12 @@ actuators:
     virtual_pin: 4
     physical_pin: 5
     servo_type: '300'
-    offset_rad: 3.14159
+    offset: 3.14159
     direction: 1
     scale: 1
-    servo_min_rad: 0
-    servo_max_rad: 6.28165
-    servo_default_rad: 3.14159
+    limit_min: 0
+    limit_max: 6.28165
+    default: 3.14159
     enabled: true
   - id: jaw
     urdf_joint: Jaw
@@ -116,12 +116,12 @@ actuators:
     virtual_pin: 5
     physical_pin: 6
     servo_type: '300'
-    offset_rad: 3.14159
+    offset: 3.14159
     direction: 1
     scale: 1
-    servo_min_rad: 3.11858
-    servo_max_rad: 5.40728
-    servo_default_rad: 3.14159
+    limit_min: 3.11858
+    limit_max: 5.40728
+    default: 3.14159
     enabled: true
 
 sensors:
