@@ -16,16 +16,9 @@ controller_manager:
   update_rate: 100
 
 boards:
-  # Feetech transport notes (not YAML keys / not board_class values):
-  # - This profile: board_class bus_servo_only → rp2040_servo2040 HAS_BUS,
-  #   UART0 half-duplex Feetech on GPIO0/1/2, commanded today via Modbus CDC.
-  # - Alternate (WIP m-brl): host firmwares/linux USB-serial Feetech from f64 SHM;
-  #   selected by bringup/package when that binary exists — do not invent schema
-  #   fields named servo2040_uart / linux_feetech.
   rp2040_so_arm:
     serial_id: ''
     board_class: bus_servo_only
-    # Modbus slave on board USB CDC (independent of other boards).
     slave_address: 1
     internal_servo_slots: 6
     firmware_target: lucy_so_arm
@@ -37,13 +30,6 @@ boards:
       type: joint_trajectory_controller/JointTrajectoryController
 
 actuators:
-  # Servo angles on the firmware scale (radians in YAML): 0–2π rad maps onto the
-  # STS3215 0–4096 tick span (BusServoConfig / HAS_BUS on rp2040_servo2040), so
-  # rad = ticks * 2π / 4096. Windows are the recorded LeRobot follower calibration;
-  # offset_rad pi is the homed centre (2048 ticks), which the calibration puts at
-  # joint zero.
-  # STS3215 smart bus servos. servo_type is the PWM-family field the schema still
-  # requires; the generated xacro drives them through the bus_servo path.
   - id: rotation
     urdf_joint: Rotation
     board: rp2040_so_arm
