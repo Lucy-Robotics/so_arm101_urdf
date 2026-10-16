@@ -249,7 +249,8 @@ REAL_CALIBRATION = {
 
 
 def test_real_config_round_trips(tmp_path):
-    """Applying the recorded ticks is idempotent on a copy of the stock config.
+    """
+    Applying the recorded ticks is idempotent on a copy of the stock config.
 
     Stock ``default.yaml`` / ``active.yaml`` stay as a generic template — they are
     not required to already equal one arm's LeRobot window.
