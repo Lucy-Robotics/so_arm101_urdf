@@ -252,21 +252,21 @@ def test_real_config_round_trips(tmp_path):
     """
     Applying the recorded ticks is idempotent on a copy of the stock config.
 
-    Stock ``default.yaml`` / ``active.yaml`` stay as a generic template — they are
-    not required to already equal one arm's LeRobot window.
+    Use ``configs/default.yaml`` as the template. A dirty ``active.yaml`` from a
+    desk calibration must not fail this check — stock default is not required to
+    already equal one arm's LeRobot window.
     """
-    active = ROOT / 'config/hardware/active.yaml'
     default = ROOT / 'config/hardware/configs/default.yaml'
-    assert active.read_text(encoding='utf-8') == default.read_text(encoding='utf-8')
+    stock = default.read_text(encoding='utf-8')
 
     copy = tmp_path / 'active.yaml'
-    copy.write_text(active.read_text(encoding='utf-8'), encoding='utf-8')
+    copy.write_text(stock, encoding='utf-8')
     out, urdf_limits, warnings = mod.apply_to_file(copy, REAL_CALIBRATION)
     assert not warnings
     assert set(urdf_limits) == {
         'Rotation', 'Pitch', 'Elbow', 'Wrist_Pitch', 'Wrist_Roll', 'Jaw',
     }
-    assert out != active.read_text(encoding='utf-8')
+    assert out != stock
     copy.write_text(out, encoding='utf-8')
     out2, _, warnings2 = mod.apply_to_file(copy, REAL_CALIBRATION)
     assert out2 == out

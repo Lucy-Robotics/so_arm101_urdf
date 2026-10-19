@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-"""
+r"""
 Apply a LeRobot follower calibration to the Lucy hardware config + URDF limits.
 
 LeRobot's half-turn homing makes the pose you hold during calibration read as
