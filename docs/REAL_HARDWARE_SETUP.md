@@ -37,7 +37,7 @@ Writes `src/so_arm101_urdf/config/hardware/configs/my_custom_so101_config.yaml`
 
 ## 4. Regenerate
 
-Control panel: **VALIDATE → ACTIVATE → RELOAD** with `robot_package:=so_arm101_urdf`,
+Control panel: **VALIDATE → ACTIVATE → RELOAD** with `robot_package:=so_arm101_urdf`.
 
 ## 5. Host firmware
 
