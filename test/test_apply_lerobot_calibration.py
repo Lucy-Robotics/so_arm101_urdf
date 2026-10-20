@@ -232,19 +232,20 @@ def test_missing_key_is_rejected(tmp_path):
         mod.load_calibration(path)
 
 
+# Fixture windows must differ from stock default.yaml so apply() is not a no-op.
 REAL_CALIBRATION = {
-    'shoulder_pan': {'id': 1, 'drive_mode': 0, 'homing_offset': -1981,
-                     'range_min': 709, 'range_max': 3229},
-    'shoulder_lift': {'id': 2, 'drive_mode': 0, 'homing_offset': -1635,
-                      'range_min': 838, 'range_max': 3210},
-    'elbow_flex': {'id': 3, 'drive_mode': 0, 'homing_offset': 1105,
-                   'range_min': 845, 'range_max': 3085},
-    'wrist_flex': {'id': 4, 'drive_mode': 0, 'homing_offset': 1690,
-                   'range_min': 798, 'range_max': 3183},
-    'wrist_roll': {'id': 5, 'drive_mode': 0, 'homing_offset': 1819,
+    'shoulder_pan': {'id': 1, 'drive_mode': 0, 'homing_offset': -1695,
+                     'range_min': 867, 'range_max': 3274},
+    'shoulder_lift': {'id': 2, 'drive_mode': 0, 'homing_offset': -1031,
+                      'range_min': 752, 'range_max': 3242},
+    'elbow_flex': {'id': 3, 'drive_mode': 0, 'homing_offset': 1631,
+                   'range_min': 835, 'range_max': 3059},
+    'wrist_flex': {'id': 4, 'drive_mode': 0, 'homing_offset': -2012,
+                   'range_min': 877, 'range_max': 3226},
+    'wrist_roll': {'id': 5, 'drive_mode': 0, 'homing_offset': 1899,
                    'range_min': 0, 'range_max': 4095},
-    'gripper': {'id': 6, 'drive_mode': 0, 'homing_offset': 1382,
-                'range_min': 2033, 'range_max': 3525},
+    'gripper': {'id': 6, 'drive_mode': 0, 'homing_offset': 1536,
+                'range_min': 2046, 'range_max': 3515},
 }
 
 
@@ -275,8 +276,8 @@ def test_real_config_round_trips(tmp_path):
     # Spot-check Rotation window from REAL_CALIBRATION shoulder_pan ticks.
     data = yaml.safe_load(out)
     rotation = next(a for a in data['actuators'] if a['id'] == 'rotation')
-    assert rotation['limit_min'] == _yaml_g(mod.ticks_to_radians(709))
-    assert rotation['limit_max'] == _yaml_g(mod.ticks_to_radians(3229))
+    assert rotation['limit_min'] == _yaml_g(mod.ticks_to_radians(867))
+    assert rotation['limit_max'] == _yaml_g(mod.ticks_to_radians(3274))
     assert rotation['offset'] == _yaml_g(mod.ticks_to_radians(2048))
 
 
