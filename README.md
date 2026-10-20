@@ -40,8 +40,6 @@ GNU GPL v3. See [LICENSE](LICENSE).
 ## Acknowledgments
 
 - [TheRobotStudio / SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100): SO101 simulation URDF lineage
-- [Sentience Robotics](https://github.com/Sentience-Robotics): Lucy integration
-- All contributors
 
 ## Contact
 
