@@ -19,7 +19,7 @@ Standalone robot package (selected via `robot_package:=so_arm101_urdf`) with:
 - Launch files: joint preview, control, Gazebo, RViz
 - Config pipeline: `config/hardware/active.yaml` → generated ros2_control / controllers / gazebo
 
-## Quick start
+## Quick start (mock / preview)
 
 ```bash
 # From lucy_ws
@@ -30,12 +30,17 @@ ros2 launch so_arm101_urdf joint_preview.launch.py
 LUCY_ROBOT_PACKAGE=so_arm101_urdf pixi run core
 ```
 
-See [docs/DEVELOPER.md](docs/DEVELOPER.md) for architecture, encoder roadmap, and regeneration steps.
+## Real hardware (required first)
+
+**Before enabling torque on a physical SO-101**, follow:
+
+**[docs/REAL_HARDWARE_SETUP.md](docs/REAL_HARDWARE_SETUP.md)** — LeRobot calibrate → apply limits → regenerate → `real:=true`.
 
 ## Documentation
 
+- **Real hardware setup:** [docs/REAL_HARDWARE_SETUP.md](docs/REAL_HARDWARE_SETUP.md)
 - Package developer notes: [docs/DEVELOPER.md](docs/DEVELOPER.md)
-- Workspace robot-package guide: [lucy_ws/docs/adding_robot_packages.md](../../docs/adding_robot_packages.md) (when present)
+- Workspace: [lucy_ws README — How to use your own robot?](../../README.md#how-to-use-your-own-robot)
 
 ## Code of Conduct
 
