@@ -1,4 +1,4 @@
-# SO-ARM101 — real hardware setup
+# SO-ARM101 hardware setup
 
 Commands assume the current directory is the **`lucy_ws` root**.
 
@@ -47,5 +47,5 @@ pixi run firmware-build-linux
 
 ## 6. Run
 
-Control panel (robot package `so_arm101_urdf`, real hardware): start the stack →
+Control panel (`robot_package:=so_arm101_urdf`, `real:=true`): start the stack →
 **Control Robot ON** → move joints.

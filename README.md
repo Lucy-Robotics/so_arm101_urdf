@@ -19,28 +19,11 @@ Standalone robot package (selected via `robot_package:=so_arm101_urdf`) with:
 - Launch files: joint preview, control, Gazebo, RViz
 - Config pipeline: `config/hardware/active.yaml` → generated ros2_control / controllers / gazebo
 
-## Quick start (mock / preview)
-
-```bash
-# From lucy_ws
-colcon build --packages-select so_arm101_urdf
-source install/setup.bash
-
-ros2 launch so_arm101_urdf joint_preview.launch.py
-LUCY_ROBOT_PACKAGE=so_arm101_urdf pixi run core
-```
-
-## Real hardware (required first)
-
-**Before enabling torque on a physical SO-101**, follow:
-
-**[docs/REAL_HARDWARE_SETUP.md](docs/REAL_HARDWARE_SETUP.md)** — LeRobot calibrate → apply limits → regenerate → `real:=true`.
-
 ## Documentation
 
-- **Real hardware setup:** [docs/REAL_HARDWARE_SETUP.md](docs/REAL_HARDWARE_SETUP.md)
+- Hardware setup (calibrate before Control Robot ON): [docs/HARDWARE_SETUP.md](docs/HARDWARE_SETUP.md)
 - Package developer notes: [docs/DEVELOPER.md](docs/DEVELOPER.md)
-- Workspace: [lucy_ws README — How to use your own robot?](../../README.md#how-to-use-your-own-robot)
+- Workspace quickstart and robot selection: [lucy_ws README](../../README.md)
 
 ## Code of Conduct
 
@@ -52,12 +35,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-GNU GPL v3 — see [LICENSE](LICENSE).
+GNU GPL v3. See [LICENSE](LICENSE).
 
 ## Acknowledgments
 
-- [TheRobotStudio / SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100) — SO101 simulation URDF lineage
-- [Sentience Robotics](https://github.com/Sentience-Robotics) — Lucy integration
+- [TheRobotStudio / SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100): SO101 simulation URDF lineage
+- [Sentience Robotics](https://github.com/Sentience-Robotics): Lucy integration
 - All contributors
 
 ## Contact
