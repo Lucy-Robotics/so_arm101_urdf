@@ -3,9 +3,8 @@
 ROS 2 **Jazzy** description package for the **SO-ARM101** 6-DOF follower arm.
 Bringup, hardware plugin, and cameras live in **`lucy_ros_packages`**.
 
-> **First contact with a physical SO-101:** follow the short user checklist
-> [REAL_HARDWARE_SETUP.md](REAL_HARDWARE_SETUP.md) before Control Robot ON.
-> Sections below (§7–§9) keep the technical detail for package maintainers.
+> **Physical SO-101:** follow [HARDWARE_SETUP.md](HARDWARE_SETUP.md) before Control Robot ON.
+> Below: package maintainer detail (calibration apply semantics, regenerate).
 
 ## Architecture
 
@@ -45,7 +44,7 @@ so_arm101_urdf/
 ├── package.xml / CMakeLists.txt / version.txt
 ├── docs/
 │   ├── DEVELOPER.md              # this file (technical)
-│   └── REAL_HARDWARE_SETUP.md    # short user checklist
+│   └── HARDWARE_SETUP.md         # plug / calibrate / run checklist
 ├── launch/                 # control, gazebo, joint_preview, rviz, rviz_standalone
 ├── config/
 │   ├── control.launch.yaml
@@ -91,7 +90,7 @@ Kinematics come from the calibrated `so101_new_calib.urdf` (SO-ARM100 / onshape-
 
 **Lucy schema note:** `servo_type` must be `180` / `270` / `300` (PWM-family field; SO-ARM uses `'300'` as a stand-in). Actuators are `board_class: bus_servo_only` → Rust crate `firmwares/rp2040_servo2040` (UART bus gated by YAML `HAS_BUS`). `physical_pin` is the STS3215 bus id. Optional board **`slave_address`** is the Modbus slave id on that board’s USB CDC (default `1`). `firmware.source_dir` is `lucy_embedded_firmware`; UF2 target is `lucy_so_arm`.
 
-Gazebo: stock `gz_ros2_control/GazeboSimSystem` ignores Lucy firmware-space `offset_rad` / `servo_*_rad` params on the gazebo xacro — joint limits come from the URDF. Those params are emitted for consistency with the HI ros2_control xacro, not because Gazebo applies them today.
+Gazebo: stock `gz_ros2_control/GazeboSimSystem` ignores Lucy firmware-space `offset_rad` / `servo_*_rad` params on the gazebo xacro; joint limits come from the URDF. Those params are emitted for consistency with the HI ros2_control xacro, not because Gazebo applies them today.
 
 ---
 
@@ -125,7 +124,7 @@ Until then, mock / Gazebo behave like other Lucy robots: mock echoes commands; G
 ```bash
 ros2 launch so_arm101_urdf joint_preview.launch.py
 ros2 launch so_arm101_urdf control.launch.py use_mock_hardware:=true
-# Real Feetech USB path — `real:=true` starts lucy-embedded-firmware-linux:
+# Feetech USB path: `real:=true` starts lucy-embedded-firmware-linux:
 LUCY_ROBOT_PACKAGE=so_arm101_urdf pixi run core -- real:=true
 ```
 
@@ -150,104 +149,15 @@ ros2 run xacro xacro description/urdf/robot.urdf.xacro \
 
 ---
 
-## 7. Desk bringup (plug → calibrate → Lucy)
+## 7. Desk bringup
 
-**Required before any real SO-101 with Lucy.** Sections 7.2–7.4 are not
-optional polish: without a per-arm LeRobot calibration applied into this package
-(and regenerated xacros), joint limits and zero are wrong for that mechanism.
-Do not turn **Control Robot ON** until they are done.
-
-End-to-end path for a physical SO-101 on the Feetech USB adapter (`1a86:55d3`,
-typically `/dev/ttyACM0`).
-
-### 7.1 USB access
-
-From `lucy_ws`:
-
-```bash
-pixi run firmware-setup   # udev rules + temporary chmod for Pico/Feetech
-```
-
-Confirm the adapter is visible and writable (`ls -l /dev/ttyACM*`).
-
-### 7.2 LeRobot calibration
-
-Pose the arm in the **URDF default pose** (Lucy joint 0). LeRobot half-turn
-homing records that pose as tick 2048. Then sweep each joint through its full
-mechanical range.
-
-```bash
-cd ~/Projects/sentience/lerobot
-# optional: lerobot-find-port
-lerobot-calibrate \
-  --robot.type=so101_follower \
-  --robot.port=/dev/ttyACM0 \
-  --robot.id=my_follower_arm
-```
-
-JSON lands under
-`~/.cache/huggingface/lerobot/calibration/robots/so_follower/<id>.json`.
-Leave the motors' `Homing_Offset` as LeRobot wrote them — Lucy goals use that
-Present-Position frame with `offset = π`.
-
-### 7.3 Apply calibration into this package
-
-```bash
-cd ~/Projects/sentience/lucy_ws/src/so_arm101_urdf
-scripts/apply_lerobot_calibration.py \
-  ~/.cache/huggingface/lerobot/calibration/robots/so_follower/my_follower_arm.json
-# optional: --dry-run   or   --no-urdf
-```
-
-Writes:
-
-| Target | Fields |
-|--------|--------|
-| `config/hardware/active.yaml` (+ preset) | `offset`/`default` = π; `limit_min`/`limit_max` = travel in **servo** rad |
-| `description/robot_description/urdf/robot_description.urdf.xacro` | `lower`/`upper` = same window in **joint** rad |
-
-Mapping used everywhere (HI, LCP, apply script):
-
-```text
-joint = (servo - offset) * direction * scale
-servo = joint / (direction * scale) + offset
-```
-
-With `offset = default = π`, the calibrated centre is URDF joint 0, so the real
-arm and the 3D view share the same zero.
-
-### 7.4 Regenerate ros2_control / Gazebo artifacts
-
-See §9. Required after every apply — YAML alone does not update the xacros.
-
-### 7.5 Build host firmware (once / after firmware changes)
-
-```bash
-cd ~/Projects/sentience/lucy_ws
-pixi run firmware-build-linux
-# binary: src/lucy_embedded_firmware/target/release/lucy-embedded-firmware-linux
-```
-
-### 7.6 Launch
-
-```bash
-cd ~/Projects/sentience/lucy_ws
-LUCY_ROBOT_PACKAGE=so_arm101_urdf pixi run core -- real:=true
-```
-
-`real` defaults to **false** in `lucy.launch.py`; without `real:=true` the
-Feetech SHM consumer never starts and the arm will not move.
-
-Open the control panel, turn **Control Robot ON** (enables torque via
-`/lucy/active_client`), then move joints. Motor daisy-chain LEDs must be lit.
-
----
+Plug-in, LeRobot calibrate, apply, regenerate, and run steps:
+[HARDWARE_SETUP.md](HARDWARE_SETUP.md).
 
 ## 8. Applying a LeRobot calibration
 
-`lerobot-calibrate` records each servo's travel in STS3215 ticks (Present frame
-after half-turn homing). Lucy stores the same windows in **radians**
-(`rad = ticks * 2π / 4096`).
+`lerobot-calibrate` records each servo's travel in STS3215 ticks. Lucy stores the
+same windows in radians (`rad = ticks * 2π / 4096`).
 
 ```bash
 cd src/so_arm101_urdf
@@ -255,24 +165,23 @@ scripts/apply_lerobot_calibration.py \
   ~/.cache/huggingface/lerobot/calibration/robots/so_follower/<arm>.json
 ```
 
-It patches `config/hardware/active.yaml` and the preset named in
-`active_meta.yaml`, plus URDF joint limits (unless `--no-urdf`). `--dry-run`
-reports without writing; `--config` targets a different YAML.
+Patches `config/hardware/active.yaml` and the preset in `active_meta.yaml`, plus
+URDF joint limits (unless `--no-urdf`). `--dry-run` reports without writing;
+`--config` targets another YAML.
 
-Keep stock `configs/default.yaml` as the generic template. After apply, copy the
-preset to a personal file under `configs/` (gitignored / not pushed) and
-activate that for desk work — do not commit one-arm limits into `default.yaml`.
+Keep `configs/default.yaml` as the generic template. Copy personal limits under
+`configs/` (not pushed) and activate them for desk work; do not commit one-arm
+limits into `default.yaml`.
 
-Records are paired with actuators by servo bus id against `physical_pin`, not by
-name — LeRobot's joint names have no relation to `urdf_joint`. A record matching
-no actuator aborts before anything is written.
+Records match actuators by servo bus id (`physical_pin`), not by LeRobot joint
+name. An unmatched record aborts before writes.
 
-`offset` / `default` are set to π (2048 ticks), the homed centre (= URDF joint
-0), not the midpoint of the window — those differ on asymmetric joints (gripper).
-`direction` is left alone: check it against the 3D view on hardware. A non-zero
-`drive_mode` is reported so it is not silently dropped.
+`offset` / `default` are set to π (2048 ticks), the homed centre (= URDF joint 0),
+not the midpoint of the travel window (those differ on asymmetric joints).
+`direction` is left alone; check it against the 3D view. A non-zero `drive_mode`
+is reported so it is not dropped silently.
 
-Regenerating afterwards (§9) is required: the script does not rewrite
+Regenerate afterwards (§9): this script does not rewrite
 `so_arm101_ros2_control.xacro` / `gazebo.xacro`.
 
 ---

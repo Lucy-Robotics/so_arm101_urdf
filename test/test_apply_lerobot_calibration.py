@@ -232,6 +232,7 @@ def test_missing_key_is_rejected(tmp_path):
         mod.load_calibration(path)
 
 
+# Fixture windows must differ from stock default.yaml so apply() is not a no-op.
 REAL_CALIBRATION = {
     'shoulder_pan': {'id': 1, 'drive_mode': 0, 'homing_offset': -1695,
                      'range_min': 867, 'range_max': 3274},
@@ -253,7 +254,7 @@ def test_real_config_round_trips(tmp_path):
     Applying the recorded ticks is idempotent on a copy of the stock config.
 
     Use ``configs/default.yaml`` as the template. A dirty ``active.yaml`` from a
-    desk calibration must not fail this check — stock default is not required to
+    desk calibration must not fail this check; stock default is not required to
     already equal one arm's LeRobot window.
     """
     default = ROOT / 'config/hardware/configs/default.yaml'
