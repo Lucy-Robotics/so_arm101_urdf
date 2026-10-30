@@ -19,6 +19,12 @@ boards:
   linux_so_arm:
     serial_id: ''
     board_class: bus_servo_only
+    host:
+      firmware: linux
+      device: SO-ARM
+      usb:
+        vid: 0x1a86
+        pid: 0x55d3
     slave_address: 1
     internal_servo_slots: 6
     firmware_target: lucy_so_arm
@@ -33,7 +39,6 @@ actuators:
   - id: rotation
     urdf_joint: Rotation
     board: linux_so_arm
-    virtual_pin: 0
     physical_pin: 1
     servo_type: '300'
     offset: 3.14159
@@ -46,7 +51,6 @@ actuators:
   - id: pitch
     urdf_joint: Pitch
     board: linux_so_arm
-    virtual_pin: 1
     physical_pin: 2
     servo_type: '300'
     offset: 3.14159
@@ -60,7 +64,6 @@ actuators:
   - id: elbow
     urdf_joint: Elbow
     board: linux_so_arm
-    virtual_pin: 2
     physical_pin: 3
     servo_type: '300'
     offset: 3.14159
@@ -73,7 +76,6 @@ actuators:
   - id: wrist_pitch
     urdf_joint: Wrist_Pitch
     board: linux_so_arm
-    virtual_pin: 3
     physical_pin: 4
     servo_type: '300'
     offset: 3.14159
@@ -86,7 +88,6 @@ actuators:
   - id: wrist_roll
     urdf_joint: Wrist_Roll
     board: linux_so_arm
-    virtual_pin: 4
     physical_pin: 5
     servo_type: '300'
     offset: 3.14159
@@ -99,7 +100,6 @@ actuators:
   - id: jaw
     urdf_joint: Jaw
     board: linux_so_arm
-    virtual_pin: 5
     physical_pin: 6
     servo_type: '300'
     offset: 3.14159
@@ -115,7 +115,6 @@ sensors:
     type: encoder
     associated_actuator: rotation
     board: linux_so_arm
-    virtual_pin: 0
     physical_pin: 1
     min_value: 1.08759
     max_value: 4.95322
@@ -124,7 +123,6 @@ sensors:
     type: encoder
     associated_actuator: pitch
     board: linux_so_arm
-    virtual_pin: 1
     physical_pin: 2
     min_value: 1.28548
     max_value: 4.92408
@@ -133,7 +131,6 @@ sensors:
     type: encoder
     associated_actuator: elbow
     board: linux_so_arm
-    virtual_pin: 2
     physical_pin: 3
     min_value: 1.29621
     max_value: 4.73233
@@ -143,7 +140,6 @@ sensors:
     type: encoder
     associated_actuator: wrist_pitch
     board: linux_so_arm
-    virtual_pin: 3
     physical_pin: 4
     min_value: 1.22412
     max_value: 4.88266
@@ -152,7 +148,6 @@ sensors:
     type: encoder
     associated_actuator: wrist_roll
     board: linux_so_arm
-    virtual_pin: 4
     physical_pin: 5
     min_value: 0
     max_value: 6.28165
@@ -161,7 +156,6 @@ sensors:
     type: encoder
     associated_actuator: jaw
     board: linux_so_arm
-    virtual_pin: 5
     physical_pin: 6
     min_value: 3.11858
     max_value: 5.40728
