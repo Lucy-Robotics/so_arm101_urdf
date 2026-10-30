@@ -4,7 +4,7 @@
   <name>so_arm101_urdf</name>
   <version>0.1.0</version>
   <description>SO-ARM101 6-DOF follower arm description and sim/visualization launches (URDF, Gazebo, RViz, ros2_control).</description>
-  <maintainer email="contact@sentience-robotics.fr">Sentience Robotics Team</maintainer>
+  <maintainer email="contact@lucy-robotics.com">Lucy Robotics Team</maintainer>
   <license>GPL-3.0-or-later</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

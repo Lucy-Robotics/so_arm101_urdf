@@ -43,5 +43,5 @@ GNU GPL v3. See [LICENSE](LICENSE).
 
 ## Contact
 
-- Email: [contact@sentience-robotics.fr](mailto:contact@sentience-robotics.fr)
-- GitHub: [Sentience Robotics](https://github.com/Sentience-Robotics)
+- Email: [contact@lucy-robotics.com](mailto:contact@lucy-robotics.com)
+- GitHub: [Lucy Robotics](https://github.com/Lucy-Robotics)
