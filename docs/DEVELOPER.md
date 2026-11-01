@@ -192,7 +192,7 @@ From `lucy_ws` (pixi env; `generate_config` from `lucy_config_generator` source
 or a built install):
 
 ```bash
-cd ~/Projects/sentience/lucy_ws
+cd ~/Projects/lucy/lucy_ws
 OUT=/tmp/so_arm101_gen
 rm -rf "$OUT" && mkdir -p "$OUT"
 pixi run bash -lc '
