@@ -303,7 +303,7 @@
     <parent link="base"/>
     <child link="shoulder"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" velocity="10" lower="-1.91986" upper="1.91986"/>
+    <limit effort="10" velocity="10" lower="-2.00491" upper="2.10309"/>
   </joint>
 
   <joint name="Pitch" type="revolute">
@@ -311,7 +311,7 @@
     <parent link="shoulder"/>
     <child link="upper_arm"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" velocity="10" lower="-1.74533" upper="1.74533"/>
+    <limit effort="10" velocity="10" lower="-1.94662" upper="1.86225"/>
   </joint>
 
   <joint name="Elbow" type="revolute">
@@ -319,7 +319,7 @@
     <parent link="upper_arm"/>
     <child link="lower_arm"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" velocity="10" lower="-1.81317" upper="1.58767"/>
+    <limit effort="10" velocity="10" lower="-1.83311" upper="1.57693"/>
   </joint>
 
   <joint name="Wrist_Pitch" type="revolute">
@@ -327,7 +327,7 @@
     <parent link="lower_arm"/>
     <child link="wrist"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" velocity="10" lower="-1.65806" upper="1.65806"/>
+    <limit effort="10" velocity="10" lower="-1.78249" upper="1.8147"/>
   </joint>
 
   <joint name="Wrist_Roll" type="revolute">
@@ -335,7 +335,7 @@
     <parent link="wrist"/>
     <child link="gripper"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" velocity="10" lower="-2.79253" upper="2.79253"/>
+    <limit effort="10" velocity="10" lower="-3.14159" upper="3.14006"/>
   </joint>
 
   <joint name="Jaw" type="revolute">
@@ -343,7 +343,15 @@
     <parent link="gripper"/>
     <child link="jaw"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" velocity="10" lower="-0.174533" upper="1.74533"/>
+    <limit effort="10" velocity="10" lower="-0.013806" upper="2.25035"/>
+  </joint>
+
+  <link name="end_effector"/>
+
+  <joint name="end_effector_joint" type="fixed">
+    <origin xyz="-0.0089 -0.0002 -0.1044" rpy="0 0 0"/>
+    <parent link="gripper"/>
+    <child link="end_effector"/>
   </joint>
 
 </robot>
