@@ -346,4 +346,12 @@
     <limit effort="10" velocity="10" lower="-0.013806" upper="2.25035"/>
   </joint>
 
+  <link name="end_effector"/>
+
+  <joint name="end_effector_joint" type="fixed">
+    <origin xyz="-0.0089 -0.0002 -0.1044" rpy="0 0 0"/>
+    <parent link="gripper"/>
+    <child link="end_effector"/>
+  </joint>
+
 </robot>
