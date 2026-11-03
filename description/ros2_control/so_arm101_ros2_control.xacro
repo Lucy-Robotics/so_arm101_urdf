@@ -22,13 +22,13 @@
           <param name="offset">3.14159</param>
           <param name="direction">1</param>
           <param name="scale">1</param>
-          <param name="limit_min">1.08759</param>
-          <param name="limit_max">4.95322</param>
+          <param name="limit_min">1.13668</param>
+          <param name="limit_max">5.24468</param>
           <param name="default">3.14159</param>
           <command_interface name="torque_enable"/>
           <command_interface name="position">
-            <param name="min">-1.91986</param>
-            <param name="max">1.91986</param>
+            <param name="min">-2.00491</param>
+            <param name="max">2.10309</param>
           </command_interface>
           <state_interface name="position" />
           <state_interface name="temperature" />
@@ -42,13 +42,13 @@
           <param name="offset">3.14159</param>
           <param name="direction">1</param>
           <param name="scale">1</param>
-          <param name="limit_min">1.28548</param>
-          <param name="limit_max">4.92408</param>
+          <param name="limit_min">1.19497</param>
+          <param name="limit_max">5.00385</param>
           <param name="default">3.14159</param>
           <command_interface name="torque_enable"/>
           <command_interface name="position">
-            <param name="min">-1.74533</param>
-            <param name="max">1.74533</param>
+            <param name="min">-1.94662</param>
+            <param name="max">1.86225</param>
           </command_interface>
           <state_interface name="position" />
           <state_interface name="temperature" />
@@ -62,13 +62,13 @@
           <param name="offset">3.14159</param>
           <param name="direction">1</param>
           <param name="scale">1</param>
-          <param name="limit_min">1.29621</param>
-          <param name="limit_max">4.73233</param>
+          <param name="limit_min">1.30849</param>
+          <param name="limit_max">4.71852</param>
           <param name="default">3.14159</param>
           <command_interface name="torque_enable"/>
           <command_interface name="position">
-            <param name="min">-1.81317</param>
-            <param name="max">1.58767</param>
+            <param name="min">-1.83311</param>
+            <param name="max">1.57693</param>
           </command_interface>
           <state_interface name="position" />
           <state_interface name="temperature" />
@@ -82,13 +82,13 @@
           <param name="offset">3.14159</param>
           <param name="direction">1</param>
           <param name="scale">1</param>
-          <param name="limit_min">1.22412</param>
-          <param name="limit_max">4.88266</param>
+          <param name="limit_min">1.35911</param>
+          <param name="limit_max">4.95629</param>
           <param name="default">3.14159</param>
           <command_interface name="torque_enable"/>
           <command_interface name="position">
-            <param name="min">-1.65806</param>
-            <param name="max">1.65806</param>
+            <param name="min">-1.78249</param>
+            <param name="max">1.8147</param>
           </command_interface>
           <state_interface name="position" />
           <state_interface name="temperature" />
@@ -107,8 +107,8 @@
           <param name="default">3.14159</param>
           <command_interface name="torque_enable"/>
           <command_interface name="position">
-            <param name="min">-2.79253</param>
-            <param name="max">2.79253</param>
+            <param name="min">-3.14159</param>
+            <param name="max">3.14006</param>
           </command_interface>
           <state_interface name="position" />
           <state_interface name="temperature" />
@@ -122,13 +122,13 @@
           <param name="offset">3.14159</param>
           <param name="direction">1</param>
           <param name="scale">1</param>
-          <param name="limit_min">3.11858</param>
-          <param name="limit_max">5.40728</param>
+          <param name="limit_min">3.12779</param>
+          <param name="limit_max">5.39194</param>
           <param name="default">3.14159</param>
           <command_interface name="torque_enable"/>
           <command_interface name="position">
-            <param name="min">-0.174533</param>
-            <param name="max">1.74533</param>
+            <param name="min">-0.013806</param>
+            <param name="max">2.25035</param>
           </command_interface>
           <state_interface name="position" />
           <state_interface name="temperature" />
