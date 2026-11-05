@@ -31,6 +31,10 @@
             <param name="max">1.91986</param>
           </command_interface>
           <state_interface name="position" />
+          <state_interface name="temperature" />
+          <state_interface name="effort" />
+          <state_interface name="current" />
+          <state_interface name="load" />
       </joint>
       <joint name="Pitch">
           <param name="type">bus_servo</param>
@@ -49,6 +53,10 @@
             <param name="max">1.74533</param>
           </command_interface>
           <state_interface name="position" />
+          <state_interface name="temperature" />
+          <state_interface name="effort" />
+          <state_interface name="current" />
+          <state_interface name="load" />
       </joint>
       <joint name="Elbow">
           <param name="type">bus_servo</param>
@@ -67,6 +75,10 @@
             <param name="max">1.58767</param>
           </command_interface>
           <state_interface name="position" />
+          <state_interface name="temperature" />
+          <state_interface name="effort" />
+          <state_interface name="current" />
+          <state_interface name="load" />
       </joint>
       <joint name="Wrist_Pitch">
           <param name="type">bus_servo</param>
@@ -85,6 +97,10 @@
             <param name="max">1.65806</param>
           </command_interface>
           <state_interface name="position" />
+          <state_interface name="temperature" />
+          <state_interface name="effort" />
+          <state_interface name="current" />
+          <state_interface name="load" />
       </joint>
       <joint name="Wrist_Roll">
           <param name="type">bus_servo</param>
@@ -103,6 +119,10 @@
             <param name="max">2.79253</param>
           </command_interface>
           <state_interface name="position" />
+          <state_interface name="temperature" />
+          <state_interface name="effort" />
+          <state_interface name="current" />
+          <state_interface name="load" />
       </joint>
       <joint name="Jaw">
           <param name="type">bus_servo</param>
@@ -121,6 +141,10 @@
             <param name="max">1.74533</param>
           </command_interface>
           <state_interface name="position" />
+          <state_interface name="temperature" />
+          <state_interface name="effort" />
+          <state_interface name="current" />
+          <state_interface name="load" />
       </joint>
   </ros2_control>
 
