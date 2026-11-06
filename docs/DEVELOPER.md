@@ -96,19 +96,11 @@ Gazebo: stock `gz_ros2_control/GazeboSimSystem` ignores Lucy firmware-space `off
 
 ## 4. Joint-state feedback (blue dots)
 
-Today Lucy is **open-loop** for real hardware:
+On real hardware `/joint_states` carries measured positions: Feetech `Present_Position` →
+`lucy-embedded-firmware-linux` → SHM → `LucySystemHardware::read()`. The `type: encoder`
+sensor rows in the YAML stay `enabled: false` and are not part of this path.
 
-- `LucySystemHardware::read()` echoes the last commanded position
-- Control-panel blue dots subscribe to `/joint_states` (command echo, not encoders)
-
-STS3215 servos **do** have magnetic encoders (`Present_Position`, 4096 ticks/rev). This package prepares disabled `type: encoder` sensor rows in `active.yaml`. Enabling closed-loop feedback later requires:
-
-1. Bus-servo driver (half-duplex serial)
-2. Firmware publishing measured positions on `sensors/so_arm`
-3. `LucySystemHardware::read()` consuming measured joints
-4. Schema / firmware templates that understand encoder sensors
-
-Until then, mock / Gazebo behave like other Lucy robots: mock echoes commands; Gazebo physics can lag.
+Mock loops commands back into SHM; Gazebo physics can lag.
 
 ---
 
@@ -154,37 +146,45 @@ ros2 run xacro xacro description/urdf/robot.urdf.xacro \
 Plug-in, LeRobot calibrate, apply, regenerate, and run steps:
 [HARDWARE_SETUP.md](HARDWARE_SETUP.md).
 
-## 8. Applying a LeRobot calibration
+## 8. Calibration
 
-`lerobot-calibrate` records each servo's travel in STS3215 ticks. Lucy stores the
-same windows in radians (`rad = ticks * 2π / 4096`).
+The control panel's wizard is the normal path (see [HARDWARE_SETUP.md](HARDWARE_SETUP.md)).
+Its backend is `calibration_node` in `lucy_config_pipeline`, driven by
+`config/hardware/calibration_profile.yaml`.
+
+**Homing is required.** Most joints' travel crosses the encoder's 4095→0 wrap at raw
+positions, which `limit_min <= limit_max` can't express. As in LeRobot, half-turn homing
+writes `Homing_Offset = position - 2047` to EEPROM at the mid pose, moving the wrap half a
+turn away. `offset` / `default` are therefore π (the homed centre, = URDF joint 0), not the
+midpoint of the travel window. Lucy keeps its limits in software and leaves the servos'
+own min and max open.
+
+**A preset belongs to one arm's EEPROM.** Its `calibration:` block records the offsets and
+the USB adapter. Boot compares them with the servos, so a recalibration elsewhere is caught.
+Activating a preset with the block writes its limits to the URDF; activating one without it
+restores `urdf_limits_stock.yaml`.
+
+`boards.*.serial_id` stays empty: it is the Pico flash id, and setting it triggers an MCU
+build and flash. The adapter's serial lives in `calibration.adapter_serial`.
+
+### Applying a LeRobot calibration
 
 ```bash
-cd src/so_arm101_urdf
-scripts/apply_lerobot_calibration.py \
+src/so_arm101_urdf/scripts/apply_lerobot_calibration.py \
   ~/.cache/huggingface/lerobot/calibration/robots/so_follower/<arm>.json
 ```
 
-Patches `config/hardware/active.yaml` and the preset in `active_meta.yaml`, plus
-URDF joint limits (unless `--no-urdf`). `--dry-run` reports without writing;
-`--config` targets another YAML.
+Writes a new preset and activates it, plus URDF joint limits (unless `--no-urdf`).
+`--dry-run` reports without writing; `--config` patches another YAML in place. The logic is
+in `lucy_config_generator.calibration`, shared with the wizard.
 
-Keep `configs/default.yaml` as the generic template. Copy personal limits under
-`configs/` (not pushed) and activate them for desk work; do not commit one-arm
-limits into `default.yaml`.
+Records match actuators by servo bus id (`physical_pin`), not by LeRobot joint name. An
+unmatched record aborts before writes.
 
-Records match actuators by servo bus id (`physical_pin`), not by LeRobot joint
-name. An unmatched record aborts before writes.
+`direction` is left alone, as it also carries the URDF's sign; check it against the 3D view.
+`drive_mode: 1` is reported rather than applied, and any other value is refused.
 
-`offset` / `default` are set to π (2048 ticks), the homed centre (= URDF joint 0),
-not the midpoint of the travel window (those differ on asymmetric joints).
-`direction` is left alone; check it against the 3D view. A non-zero `drive_mode`
-is reported so it is not dropped silently.
-
-Regenerate afterwards (§9): this script does not rewrite
-`so_arm101_ros2_control.xacro` / `gazebo.xacro`.
-
----
+Regenerate afterwards (§9).
 
 ## 9. Regenerating configs
 
@@ -239,13 +239,11 @@ packages built in the same workspace for control launches.
 | Meshes | Collada DAE | STL |
 | Servos | PWM hobby | STS3215 bus (schema still PWM-typed) |
 | Controllers | left/right arm + torso_head | `so_arm_controller` |
-| Encoders | None | Prepared (disabled) |
+| Encoders | None | Bus feedback (`Present_Position`); YAML encoder rows unused |
 
 ---
 
 ## 12. Future work
 
-- Hardware serial IDs / bus-servo firmware
-- Closed-loop encoder → `/joint_states`
 - Leader → follower teleoperation bridge
 - Dual-arm (leader + follower) configs

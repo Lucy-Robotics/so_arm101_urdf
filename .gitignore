@@ -1,3 +1,10 @@
 .idea
 *.env
 __pycache__
+
+# Per-arm calibration state
+config/hardware/backups/
+config/hardware/configs/*
+!config/hardware/configs/default.yaml
+config/hardware/adapter_bindings.yaml
+config/hardware/.calibration_session.yaml
