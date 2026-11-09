@@ -35,7 +35,12 @@ def _load_module():
     return module
 
 
-mod = _load_module()
+try:
+    mod = _load_module()
+except ModuleNotFoundError as e:
+    # lucy_config_generator ships in lucy_ros_packages, a sibling repo this package's own
+    # standalone CI never checks out, so it is only reachable from a sourced lucy_ws workspace.
+    pytest.skip(f"{e} (needs a sourced lucy_ws workspace)", allow_module_level=True)
 
 
 def _yaml_g(value: float) -> float:
