@@ -10,7 +10,7 @@ Standalone robot package (selected via `robot_package:=so_arm101_urdf`) with:
 - Calibrated kinematics from `so101_new_calib.urdf`
 - ros2_control + `LucySystemHardware` (mock or real)
 - Gazebo Harmonic simulation
-- Hardware YAML prepared for future magnetic-encoder feedback
+- Measured joint positions from the servos, and guided calibration in the control panel
 
 ## Features
 

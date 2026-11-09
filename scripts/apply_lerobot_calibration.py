@@ -44,210 +44,44 @@ Writes ``config/hardware/configs/my_custom_so101_config.yaml`` (stock
 
 from __future__ import annotations
 
-import math
 import argparse
-import json
-import re
-import sys
 from datetime import datetime
 from datetime import timezone
 from pathlib import Path
+import sys
 
 import yaml
 
-# Firmware / YAML map 0–2π rad linearly onto the STS3215 0–4096 tick span.
-TICKS_PER_TURN = 4096
-# LeRobot half-turn homing centres Present_Position here (= URDF joint 0).
-CENTRE_TICKS = TICKS_PER_TURN // 2
+try:
+    from lucy_config_generator import calibration as _calibration
+except ImportError:  # Unsourced workspace: the package is a sibling under src/.
+    sys.path.insert(
+        0, str(Path(__file__).resolve().parents[2] / 'lucy_ros_packages/lucy_config_generator')
+    )
+    from lucy_config_generator import calibration as _calibration
 
-REQUIRED_RECORD_KEYS = ("id", "range_min", "range_max")
-DEFAULT_URDF_REL = Path("description/robot_description/urdf/robot_description.urdf.xacro")
-DEFAULT_PRESET_NAME = "my_custom_so101_config"
-STOCK_PRESET_NAME = "default"
+CalibrationError = _calibration.CalibrationError
+apply_to_file = _calibration.apply_to_file
+apply_updates = _calibration.apply_updates
+apply_urdf_limits = _calibration.apply_urdf_limits
+homing_offsets_by_actuator = _calibration.homing_offsets_by_actuator
+load_calibration = _calibration.load_calibration
+plan = _calibration.plan
+sensor_updates = _calibration.sensor_updates
+servo_window_to_joint_limits = _calibration.servo_window_to_joint_limits
+set_calibration_block = _calibration.set_calibration_block
+ticks_to_radians = _calibration.ticks_to_radians
 
+CENTRE_TICKS = _calibration.CENTRE_TICKS
+TICKS_PER_TURN = _calibration.TICKS_PER_TURN
 
-class CalibrationError(RuntimeError):
-    """A calibration that cannot be applied to this config."""
-
-
-def ticks_to_radians(ticks: float) -> float:
-    """Convert raw encoder ticks to radians stored in the hardware YAML."""
-    return round(ticks * (2.0 * math.pi) / TICKS_PER_TURN, 6)
-
-
-def servo_window_to_joint_limits(
-    limit_min: float,
-    limit_max: float,
-    offset: float,
-    direction: float,
-    scale: float,
-) -> tuple[float, float]:
-    """Map a servo-frame travel window to URDF joint lower/upper (sorted)."""
-    denom = direction * scale
-    if denom == 0:
-        raise CalibrationError("direction*scale must be non-zero")
-    a = (limit_min - offset) * denom
-    b = (limit_max - offset) * denom
-    lo, hi = (a, b) if a <= b else (b, a)
-    return round(lo, 6), round(hi, 6)
+DEFAULT_URDF_REL = Path('description/robot_description/urdf/robot_description.urdf.xacro')
+DEFAULT_PRESET_NAME = 'my_custom_so101_config'
+STOCK_PRESET_NAME = 'default'
 
 
-def load_calibration(path: Path) -> dict[str, dict]:
-    """Read a lerobot-calibrate JSON, rejecting records missing required keys."""
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as e:
-        raise CalibrationError(f"cannot read calibration {path}: {e}") from e
-    if not isinstance(data, dict) or not data:
-        raise CalibrationError(f"{path}: expected a non-empty object of motor records")
-
-    for motor, record in data.items():
-        if not isinstance(record, dict):
-            raise CalibrationError(f"{path}: {motor!r} is not an object")
-        missing = [k for k in REQUIRED_RECORD_KEYS if k not in record]
-        if missing:
-            raise CalibrationError(f"{path}: {motor!r} is missing {missing}")
-        if record["range_min"] >= record["range_max"]:
-            raise CalibrationError(
-                f"{path}: {motor!r} has range_min {record['range_min']} "
-                f">= range_max {record['range_max']}"
-            )
-    return data
-
-
-def plan(
-    calibration: dict[str, dict], config: dict
-) -> tuple[dict, dict[str, tuple[float, float]], list[str]]:
-    """
-    Pair calibration records with actuators by servo id, and derive their values.
-
-    Returns per-actuator YAML field updates, per-``urdf_joint`` limit pairs, and
-    warnings. Raises when a record matches no actuator or two actuators share
-    its id.
-    """
-    actuators = config.get("actuators") or []
-    warnings: list[str] = []
-    updates: dict[str, dict[str, float]] = {}
-    urdf_limits: dict[str, tuple[float, float]] = {}
-
-    by_pin: dict[int, list[dict]] = {}
-    for actuator in actuators:
-        pin = actuator.get("physical_pin")
-        if pin is not None:
-            by_pin.setdefault(int(pin), []).append(actuator)
-
-    centre = ticks_to_radians(CENTRE_TICKS)
-    for motor, record in sorted(calibration.items(), key=lambda kv: kv[1]["id"]):
-        servo_id = int(record["id"])
-        matched = by_pin.get(servo_id, [])
-        if not matched:
-            raise CalibrationError(
-                f"{motor!r} (servo id {servo_id}) matches no actuator: no "
-                f"physical_pin {servo_id} in the config"
-            )
-        if len(matched) > 1:
-            ids = [str(a["id"]) for a in matched]
-            raise CalibrationError(
-                f"{motor!r} (servo id {servo_id}) matches several actuators "
-                f"({', '.join(ids)}); physical_pin must be unique"
-            )
-        actuator = matched[0]
-        actuator_id = str(actuator["id"])
-        if record.get("drive_mode"):
-            warnings.append(
-                f"{motor}: drive_mode={record['drive_mode']} means LeRobot drives "
-                f"this joint inverted. direction is left at its current value; "
-                f"check {actuator_id} against the 3D view."
-            )
-        limit_min = ticks_to_radians(record["range_min"])
-        limit_max = ticks_to_radians(record["range_max"])
-        fields = {
-            "offset": centre,
-            "limit_min": limit_min,
-            "limit_max": limit_max,
-            "default": centre,
-        }
-        updates[actuator_id] = fields
-
-        urdf_joint = str(actuator.get("urdf_joint") or "").strip()
-        if urdf_joint:
-            direction = float(actuator.get("direction", 1))
-            scale = float(actuator.get("scale", 1))
-            urdf_limits[urdf_joint] = servo_window_to_joint_limits(
-                limit_min, limit_max, centre, direction, scale
-            )
-
-    unmatched = [str(a["id"]) for a in actuators if str(a["id"]) not in updates]
-    if unmatched:
-        warnings.append(
-            f"no calibration record for: {', '.join(sorted(unmatched))} "
-            f"(left untouched)"
-        )
-    return updates, urdf_limits, warnings
-
-
-def sensor_updates(config: dict, updates: dict[str, dict]) -> dict[str, dict]:
-    """Mirror each actuator's new window onto the sensors that report on it."""
-    out: dict[str, dict[str, float]] = {}
-    for sensor in config.get("sensors") or []:
-        actuator = str(sensor.get("associated_actuator", ""))
-        if actuator in updates:
-            out[str(sensor["id"])] = {
-                "min_value": updates[actuator]["limit_min"],
-                "max_value": updates[actuator]["limit_max"],
-            }
-    return out
-
-
-def _block_span(text: str, entry_id: str) -> tuple[int, int]:
-    """Character span of the `- id: <entry_id>` list entry, up to the next one."""
-    opener = re.search(rf"(?m)^\s*-\s+id:\s+{re.escape(entry_id)}\s*$", text)
-    if opener is None:
-        raise CalibrationError(f'no "- id: {entry_id}" entry found')
-    start = opener.start()
-    following = re.search(r"(?m)^\s*-\s+id:\s+\S+\s*$", text[opener.end():])
-    end = opener.end() + following.start() if following else len(text)
-    return start, end
-
-
-def apply_updates(text: str, updates: dict[str, dict]) -> str:
-    """Rewrite the named keys inside each entry, leaving comments and order alone."""
-    for entry_id, fields in updates.items():
-        start, end = _block_span(text, entry_id)
-        block = text[start:end]
-        for key, value in fields.items():
-            block, count = re.subn(rf"(?m)^(\s*{key}:).*$", rf"\g<1> {value:g}", block)
-            if count != 1:
-                raise CalibrationError(
-                    f'{entry_id}: expected one "{key}:" line, found {count}'
-                )
-        text = text[:start] + block + text[end:]
-    return text
-
-
-def apply_urdf_limits(text: str, limits: dict[str, tuple[float, float]]) -> str:
-    """Rewrite ``<limit ... lower= upper=>`` on named joints; keep other attrs."""
-    for joint, (lo, hi) in limits.items():
-        pattern = (
-            rf'(<joint\s+name="{re.escape(joint)}"[^>]*>.*?'
-            rf'<limit\b)([^>]*)(/>)'
-        )
-
-        def _rewrite(match: re.Match[str], *, lower: float = lo, upper: float = hi) -> str:
-            attrs = match.group(2)
-            attrs, n_lo = re.subn(r'\blower="[^"]*"', f'lower="{lower:g}"', attrs)
-            attrs, n_hi = re.subn(r'\bupper="[^"]*"', f'upper="{upper:g}"', attrs)
-            if n_lo != 1 or n_hi != 1:
-                raise CalibrationError(
-                    f'joint {joint!r}: expected one lower and one upper on <limit>, '
-                    f"found lower={n_lo} upper={n_hi}"
-                )
-            return f"{match.group(1)}{attrs}{match.group(3)}"
-
-        text, count = re.subn(pattern, _rewrite, text, count=1, flags=re.S)
-        if count != 1:
-            raise CalibrationError(f"joint {joint!r}: no <limit> found in URDF xacro")
-    return text
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec='microseconds').replace('+00:00', 'Z')
 
 
 def template_config(package_root: Path) -> Path:
@@ -263,25 +97,12 @@ def preset_path(package_root: Path, preset_name: str) -> Path:
 
 
 def write_active_meta(package_root: Path, preset_name: str) -> None:
-    meta = package_root / "config/hardware/active_meta.yaml"
-    payload = {
-        "name": preset_name,
-        "activated_at": datetime.now(timezone.utc)
-        .isoformat(timespec="microseconds")
-        .replace("+00:00", "Z"),
-    }
-    meta.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
-
-
-def apply_to_file(
-    path: Path, calibration: dict[str, dict]
-) -> tuple[str, dict[str, tuple[float, float]], list[str]]:
-    """Return rewritten YAML text, URDF limit map, and warnings."""
-    text = path.read_text(encoding="utf-8")
-    config = yaml.safe_load(text) or {}
-    updates, urdf_limits, warnings = plan(calibration, config)
-    updates.update(sensor_updates(config, updates))
-    return apply_updates(text, updates), urdf_limits, warnings
+    meta = package_root / 'config/hardware/active_meta.yaml'
+    payload = {}
+    if meta.is_file():
+        payload = yaml.safe_load(meta.read_text(encoding='utf-8')) or {}
+    payload.update({'name': preset_name, 'activated_at': _now()})
+    meta.write_text(yaml.safe_dump(payload, sort_keys=False), encoding='utf-8')
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -354,6 +175,14 @@ def main(argv: list[str] | None = None) -> int:
 
         calibration = load_calibration(args.calibration)
         new_text, urdf_limits, warnings = apply_to_file(source, calibration)
+        if use_new_preset:
+            new_text = set_calibration_block(
+                new_text,
+                calibrated_at=_now(),
+                homing_offsets=homing_offsets_by_actuator(
+                    calibration, yaml.safe_load(new_text) or {}
+                ),
+            )
         new_urdf = None
         if urdf_path is not None:
             if not urdf_path.is_file():
@@ -412,7 +241,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.dry_run:
         print(
             "\nRegenerate the package configs so the new windows reach the "
-            "ros2_control and gazebo xacros (see REAL_HARDWARE_SETUP.md), then "
+            "ros2_control and gazebo xacros (see docs/HARDWARE_SETUP.md), then "
             "restart the stack with real:=true."
         )
     return 0

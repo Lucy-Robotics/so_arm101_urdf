@@ -304,3 +304,24 @@ def test_main_refuses_stock_preset_name(tmp_path, capsys):
     err = capsys.readouterr().err
     assert rc == 1
     assert 'default' in err
+
+
+def test_unknown_drive_mode_is_refused(tmp_path):
+    calibration = json.loads(json.dumps(CALIBRATION))
+    calibration['gripper']['drive_mode'] = 2
+    path = tmp_path / 'cal.json'
+    path.write_text(json.dumps(calibration), encoding='utf-8')
+    with pytest.raises(mod.CalibrationError, match='unknown drive_mode'):
+        mod.load_calibration(path)
+
+
+def test_set_calibration_block_records_the_offsets(tmp_path):
+    out, _, _ = _apply(tmp_path=tmp_path)
+    config = yaml.safe_load(out)
+    block = yaml.safe_load(mod.set_calibration_block(
+        out,
+        calibrated_at='T',
+        homing_offsets=mod.homing_offsets_by_actuator(CALIBRATION, config),
+    ))['calibration']
+    assert block['homing_offsets']['jaw'] == 1534
+    assert block['adapter_serial'] == ''
