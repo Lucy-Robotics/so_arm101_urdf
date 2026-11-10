@@ -19,12 +19,14 @@ from __future__ import annotations
 
 import json
 
-from conftest import load_or_skip
 from conftest import ROOT
+from conftest import try_load_module
 from conftest import yaml_g
+import pytest
 import yaml
 
-mod = load_or_skip()
+mod, _skip_reason = try_load_module()
+pytestmark = pytest.mark.skipif(mod is None, reason=_skip_reason or '')
 
 # Fixture windows must differ from stock default.yaml so apply() is not a no-op.
 REAL_CALIBRATION = {

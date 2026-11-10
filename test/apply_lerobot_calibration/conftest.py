@@ -20,8 +20,6 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -33,19 +31,21 @@ def _load_module():
     return module
 
 
-def load_or_skip():
-    """Load the real module, or skip the calling test file's collection.
+def try_load_module():
+    """
+    Load the real module, or return (None, reason) if it is unreachable.
 
-    Must be called from each test module itself, not from this conftest: a
-    skip raised while pytest imports a conftest is recorded as a collection
-    error, not a skipped test.
+    Each test file turns a (None, reason) result into a module-level
+    ``pytest.mark.skipif``: a module-level ``pytest.skip`` call itself would
+    make pytest report "collected 0 items" and exit 5, which ament's test
+    runner treats as a failed test, not a skipped one.
     """
     try:
-        return _load_module()
+        return _load_module(), None
     except ModuleNotFoundError as e:
         # lucy_config_generator ships in lucy_ros_packages, a sibling repo this package's own
         # standalone CI never checks out, so it is only reachable from a sourced lucy_ws workspace.
-        pytest.skip(f"{e} (needs a sourced lucy_ws workspace)", allow_module_level=True)
+        return None, f'{e} (needs a sourced lucy_ws workspace)'
 
 
 def yaml_g(value: float) -> float:

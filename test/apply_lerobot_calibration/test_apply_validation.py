@@ -20,10 +20,11 @@ from __future__ import annotations
 import json
 
 from conftest import CALIBRATION
-from conftest import load_or_skip
+from conftest import try_load_module
 import pytest
 
-mod = load_or_skip()
+mod, _skip_reason = try_load_module()
+pytestmark = pytest.mark.skipif(mod is None, reason=_skip_reason or '')
 
 
 def test_inverted_range_is_rejected(tmp_path):
