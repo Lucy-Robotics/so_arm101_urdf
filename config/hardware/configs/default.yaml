@@ -16,7 +16,7 @@ controller_manager:
   update_rate: 100
 
 boards:
-  rp2040_so_arm:
+  linux_so_arm:
     serial_id: ''
     board_class: bus_servo_only
     slave_address: 1
@@ -32,7 +32,7 @@ boards:
 actuators:
   - id: rotation
     urdf_joint: Rotation
-    board: rp2040_so_arm
+    board: linux_so_arm
     virtual_pin: 0
     physical_pin: 1
     servo_type: '300'
@@ -45,7 +45,7 @@ actuators:
     enabled: true
   - id: pitch
     urdf_joint: Pitch
-    board: rp2040_so_arm
+    board: linux_so_arm
     virtual_pin: 1
     physical_pin: 2
     servo_type: '300'
@@ -59,7 +59,7 @@ actuators:
 
   - id: elbow
     urdf_joint: Elbow
-    board: rp2040_so_arm
+    board: linux_so_arm
     virtual_pin: 2
     physical_pin: 3
     servo_type: '300'
@@ -72,7 +72,7 @@ actuators:
     enabled: true
   - id: wrist_pitch
     urdf_joint: Wrist_Pitch
-    board: rp2040_so_arm
+    board: linux_so_arm
     virtual_pin: 3
     physical_pin: 4
     servo_type: '300'
@@ -85,7 +85,7 @@ actuators:
     enabled: true
   - id: wrist_roll
     urdf_joint: Wrist_Roll
-    board: rp2040_so_arm
+    board: linux_so_arm
     virtual_pin: 4
     physical_pin: 5
     servo_type: '300'
@@ -98,7 +98,7 @@ actuators:
     enabled: true
   - id: jaw
     urdf_joint: Jaw
-    board: rp2040_so_arm
+    board: linux_so_arm
     virtual_pin: 5
     physical_pin: 6
     servo_type: '300'
@@ -114,7 +114,7 @@ sensors:
   - id: rotation_encoder
     type: encoder
     associated_actuator: rotation
-    board: rp2040_so_arm
+    board: linux_so_arm
     virtual_pin: 0
     physical_pin: 1
     min_value: 1.08759
@@ -123,7 +123,7 @@ sensors:
   - id: pitch_encoder
     type: encoder
     associated_actuator: pitch
-    board: rp2040_so_arm
+    board: linux_so_arm
     virtual_pin: 1
     physical_pin: 2
     min_value: 1.28548
@@ -132,7 +132,7 @@ sensors:
   - id: elbow_encoder
     type: encoder
     associated_actuator: elbow
-    board: rp2040_so_arm
+    board: linux_so_arm
     virtual_pin: 2
     physical_pin: 3
     min_value: 1.29621
@@ -142,7 +142,7 @@ sensors:
   - id: wrist_pitch_encoder
     type: encoder
     associated_actuator: wrist_pitch
-    board: rp2040_so_arm
+    board: linux_so_arm
     virtual_pin: 3
     physical_pin: 4
     min_value: 1.22412
@@ -151,7 +151,7 @@ sensors:
   - id: wrist_roll_encoder
     type: encoder
     associated_actuator: wrist_roll
-    board: rp2040_so_arm
+    board: linux_so_arm
     virtual_pin: 4
     physical_pin: 5
     min_value: 0
@@ -160,7 +160,7 @@ sensors:
   - id: jaw_encoder
     type: encoder
     associated_actuator: jaw
-    board: rp2040_so_arm
+    board: linux_so_arm
     virtual_pin: 5
     physical_pin: 6
     min_value: 3.11858
