@@ -25,7 +25,7 @@ if(BUILD_TESTING)
       "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1"
   )
   ament_add_pytest_test(apply_lerobot_calibration
-    test/test_apply_lerobot_calibration.py
+    test/apply_lerobot_calibration
     TIMEOUT 60
     ENV
       "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1"
