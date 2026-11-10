@@ -102,7 +102,12 @@ def test_end_effector_is_fixed_to_the_gripper(controller_config: Path):
 
     urdf, base = _so_arm101_paths()
     r = run_xacro(
-        [str(urdf), f"base_path:={base}", f"controller_config:={controller_config}", "use_mock_hardware:=true"]
+        [
+            str(urdf),
+            f"base_path:={base}",
+            f"controller_config:={controller_config}",
+            "use_mock_hardware:=true",
+        ]
     )
     assert r.returncode == 0, r.stderr + r.stdout
     joint = ET.fromstring(r.stdout).find("joint[@name='end_effector_joint']")
