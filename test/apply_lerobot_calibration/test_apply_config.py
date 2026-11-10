@@ -21,15 +21,17 @@ import json
 
 from conftest import apply
 from conftest import CALIBRATION
-from conftest import mod
+from conftest import load_or_skip
 from conftest import yaml_g
 import pytest
 import yaml
 
+mod = load_or_skip()
+
 
 def test_windows_and_centre_are_written(tmp_path):
     """Ranges convert to radians and joint zero lands on the homed centre."""
-    out, _, urdf_limits = apply(tmp_path=tmp_path)
+    out, _, urdf_limits = apply(mod, tmp_path=tmp_path)
     actuators = {a['id']: a for a in yaml.safe_load(out)['actuators']}
 
     rotation = actuators['rotation']
@@ -55,7 +57,7 @@ def test_windows_and_centre_are_written(tmp_path):
 
 def test_matching_is_by_servo_id_not_name(tmp_path):
     """Joint names in the calibration carry no relation to urdf_joint; the bus id does."""
-    out, _, _ = apply(tmp_path=tmp_path)
+    out, _, _ = apply(mod, tmp_path=tmp_path)
     actuators = {a['id']: a for a in yaml.safe_load(out)['actuators']}
     # 'gripper' (id 6) reached 'jaw' (physical_pin 6), not the alphabetically near
     # 'rotation'.
@@ -65,7 +67,7 @@ def test_matching_is_by_servo_id_not_name(tmp_path):
 
 def test_untouched_fields_and_comments_survive(tmp_path):
     """The file is edited as text, so nothing outside the named keys moves."""
-    out, _, _ = apply(tmp_path=tmp_path)
+    out, _, _ = apply(mod, tmp_path=tmp_path)
     assert '# A comment that must survive the rewrite.' in out
     actuators = {a['id']: a for a in yaml.safe_load(out)['actuators']}
     assert actuators['jaw']['direction'] == -1
@@ -75,7 +77,7 @@ def test_untouched_fields_and_comments_survive(tmp_path):
 
 def test_sensor_bounds_follow_their_actuator(tmp_path):
     """Encoder bounds stay in the same space as the actuator they report on."""
-    out, _, _ = apply(tmp_path=tmp_path)
+    out, _, _ = apply(mod, tmp_path=tmp_path)
     sensor = yaml.safe_load(out)['sensors'][0]
     assert sensor['min_value'] == yaml_g(mod.ticks_to_radians(768))
     assert sensor['max_value'] == yaml_g(mod.ticks_to_radians(3273))
@@ -84,8 +86,8 @@ def test_sensor_bounds_follow_their_actuator(tmp_path):
 
 def test_applying_twice_changes_nothing(tmp_path):
     """Re-running on an already-calibrated config is a no-op."""
-    once, _, _ = apply(tmp_path=tmp_path)
-    twice, _, _ = apply(text=once, tmp_path=tmp_path)
+    once, _, _ = apply(mod, tmp_path=tmp_path)
+    twice, _, _ = apply(mod, text=once, tmp_path=tmp_path)
     assert once == twice
 
 
@@ -96,14 +98,14 @@ def test_unmatched_record_refuses_to_write(tmp_path):
         'range_min': 866, 'range_max': 3083,
     })
     with pytest.raises(mod.CalibrationError, match='matches no actuator'):
-        apply(calibration=calibration, tmp_path=tmp_path)
+        apply(mod, calibration=calibration, tmp_path=tmp_path)
 
 
 def test_drive_mode_is_reported_not_applied(tmp_path):
     """Leave direction alone: an inversion is surfaced for a human, not guessed."""
     calibration = json.loads(json.dumps(CALIBRATION))
     calibration['gripper']['drive_mode'] = 1
-    out, warnings, _ = apply(calibration=calibration, tmp_path=tmp_path)
+    out, warnings, _ = apply(mod, calibration=calibration, tmp_path=tmp_path)
     assert any('drive_mode=1' in w for w in warnings)
     actuators = {a['id']: a for a in yaml.safe_load(out)['actuators']}
     assert actuators['jaw']['direction'] == -1
@@ -111,8 +113,8 @@ def test_drive_mode_is_reported_not_applied(tmp_path):
 
 def test_actuator_without_a_record_is_left_alone(tmp_path):
     """Only calibrated joints move; the rest keep their values and are reported."""
-    out, warnings, _ = apply(calibration={'gripper': CALIBRATION['gripper']},
-                              tmp_path=tmp_path)
+    out, warnings, _ = apply(mod, calibration={'gripper': CALIBRATION['gripper']},
+                             tmp_path=tmp_path)
     actuators = {a['id']: a for a in yaml.safe_load(out)['actuators']}
     assert actuators['rotation']['limit_min'] == 1.396263
     assert any('rotation' in w for w in warnings)

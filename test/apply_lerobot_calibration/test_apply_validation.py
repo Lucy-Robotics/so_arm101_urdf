@@ -20,8 +20,10 @@ from __future__ import annotations
 import json
 
 from conftest import CALIBRATION
-from conftest import mod
+from conftest import load_or_skip
 import pytest
+
+mod = load_or_skip()
 
 
 def test_inverted_range_is_rejected(tmp_path):

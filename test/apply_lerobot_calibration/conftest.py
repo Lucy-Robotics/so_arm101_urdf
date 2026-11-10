@@ -33,12 +33,19 @@ def _load_module():
     return module
 
 
-try:
-    mod = _load_module()
-except ModuleNotFoundError as e:
-    # lucy_config_generator ships in lucy_ros_packages, a sibling repo this package's own
-    # standalone CI never checks out, so it is only reachable from a sourced lucy_ws workspace.
-    pytest.skip(f"{e} (needs a sourced lucy_ws workspace)", allow_module_level=True)
+def load_or_skip():
+    """Load the real module, or skip the calling test file's collection.
+
+    Must be called from each test module itself, not from this conftest: a
+    skip raised while pytest imports a conftest is recorded as a collection
+    error, not a skipped test.
+    """
+    try:
+        return _load_module()
+    except ModuleNotFoundError as e:
+        # lucy_config_generator ships in lucy_ros_packages, a sibling repo this package's own
+        # standalone CI never checks out, so it is only reachable from a sourced lucy_ws workspace.
+        pytest.skip(f"{e} (needs a sourced lucy_ws workspace)", allow_module_level=True)
 
 
 def yaml_g(value: float) -> float:
@@ -90,7 +97,7 @@ CALIBRATION = {
 }
 
 
-def apply(text=CONFIG, calibration=None, tmp_path=None):
+def apply(mod, text=CONFIG, calibration=None, tmp_path=None):
     path = tmp_path / 'active.yaml'
     path.write_text(text, encoding='utf-8')
     new_text, urdf_limits, warnings = mod.apply_to_file(

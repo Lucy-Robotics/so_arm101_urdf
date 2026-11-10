@@ -19,8 +19,10 @@ from __future__ import annotations
 
 from conftest import apply
 from conftest import CALIBRATION
-from conftest import mod
+from conftest import load_or_skip
 import yaml
+
+mod = load_or_skip()
 
 
 def test_ticks_to_radians_matches_the_firmware_scale():
@@ -50,7 +52,7 @@ def test_apply_urdf_limits_rewrites_lower_upper(tmp_path):
 
 
 def test_set_calibration_block_records_the_offsets(tmp_path):
-    out, _, _ = apply(tmp_path=tmp_path)
+    out, _, _ = apply(mod, tmp_path=tmp_path)
     config = yaml.safe_load(out)
     block = yaml.safe_load(mod.set_calibration_block(
         out,
