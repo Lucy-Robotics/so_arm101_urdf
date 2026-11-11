@@ -15,13 +15,15 @@ ls -l /dev/ttyACM*
 
 ## 2. Host firmware
 
+`pixi run build` compiles it (colcon package `lucy_embedded_firmware_linux`). To rebuild it alone:
+
 ```bash
 pixi run firmware-build-linux
 ```
 
 ## 3. Calibrate in the control panel
 
-Start the stack (`robot_package:=so_arm101_urdf`, `real:=true`), then open
+Start the stack (`robot_package:=so_arm101_urdf`, `mode:=real bridge:=linux`), then open
 **Robot Configuration → Calibrate** and follow the wizard. It takes a few minutes:
 
 1. **Health checks**: adapter, servos, torque off.
@@ -56,5 +58,10 @@ run the script again to add it.
 
 ## 4. Run
 
-Control panel (`robot_package:=so_arm101_urdf`, `real:=true`): start the stack →
-**Control Robot ON** → move joints.
+```bash
+LUCY_ROBOT_PACKAGE=so_arm101_urdf pixi run real-linux
+# = ros2 launch lucy_bringup lucy.launch.py robot_package:=so_arm101_urdf mode:=real bridge:=linux
+```
+
+`lucy_control_supervisor` starts `lucy-embedded-firmware-linux so_arm` with the stack.
+Control panel: start the stack → **Control Robot ON** → move joints.

@@ -116,8 +116,8 @@ Mock loops commands back into SHM; Gazebo physics can lag.
 ```bash
 ros2 launch so_arm101_urdf joint_preview.launch.py
 ros2 launch so_arm101_urdf control.launch.py use_mock_hardware:=true
-# Feetech USB path: `real:=true` starts lucy-embedded-firmware-linux:
-LUCY_ROBOT_PACKAGE=so_arm101_urdf pixi run core -- real:=true
+# Feetech USB path: `mode:=real bridge:=linux` starts lucy-embedded-firmware-linux:
+LUCY_ROBOT_PACKAGE=so_arm101_urdf pixi run real-linux
 ```
 
 ---

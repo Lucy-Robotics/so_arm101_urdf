@@ -124,6 +124,6 @@ def run(
         print(
             "\nRegenerate the package configs so the new windows reach the "
             "ros2_control and gazebo xacros (see docs/HARDWARE_SETUP.md), then "
-            "restart the stack with real:=true."
+            "restart the stack with mode:=real bridge:=linux."
         )
     return 0
