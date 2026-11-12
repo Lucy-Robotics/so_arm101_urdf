@@ -95,3 +95,22 @@ def test_xacro_gazebo_mode(controller_config: Path):
     assert r.returncode == 0, r.stderr + r.stdout
     assert "<robot" in r.stdout
     assert "gz_ros2_control" in r.stdout or "GazeboSimSystem" in r.stdout
+
+
+def test_end_effector_is_fixed_to_the_gripper(controller_config: Path):
+    import xml.etree.ElementTree as ET
+
+    urdf, base = _so_arm101_paths()
+    r = run_xacro(
+        [
+            str(urdf),
+            f"base_path:={base}",
+            f"controller_config:={controller_config}",
+            "use_mock_hardware:=true",
+        ]
+    )
+    assert r.returncode == 0, r.stderr + r.stdout
+    joint = ET.fromstring(r.stdout).find("joint[@name='end_effector_joint']")
+    assert joint is not None and joint.get("type") == "fixed"
+    assert joint.find("parent").get("link") == "gripper"
+    assert joint.find("child").get("link") == "end_effector"
