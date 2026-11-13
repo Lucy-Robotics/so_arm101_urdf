@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<!-- SO-ARM101 model properties. Mesh paths come from the entry xacro (mesh_dir). -->
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="so_arm101">
+  <!-- Source URDF is already in meters; keep scale 1.0 for consistency with Lucy xacro patterns. -->
+  <xacro:property name="model_scale" value="1.0"/>
+</robot>

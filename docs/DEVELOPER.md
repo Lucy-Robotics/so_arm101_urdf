@@ -1,0 +1,249 @@
+# Developer guide - `so_arm101_urdf`
+
+ROS 2 **Jazzy** description package for the **SO-ARM101** 6-DOF follower arm.
+Bringup, hardware plugin, and cameras live in **`lucy_ros_packages`**.
+
+> **Physical SO-101:** follow [HARDWARE_SETUP.md](HARDWARE_SETUP.md) before Control Robot ON.
+> Below: package maintainer detail (calibration apply semantics, regenerate).
+
+## Architecture
+
+Hardware YAML schema lives in `config/hardware/` (radians).  
+Architecture index: [`lucy_ws/docs/architecture/README.md`](../../../docs/architecture/README.md) ·  
+System schematic (do not duplicate here): [`lucy_ws/docs/architecture/overview.md`](../../../docs/architecture/overview.md).
+
+---
+
+## 1. Role of this package
+
+| Concern | Lives in |
+|---------|----------|
+| Robot description (xacro, meshes, joint limits, collisions) | `description/` |
+| ros2_control hardware interfaces (real / mock) | `description/ros2_control/` |
+| Gazebo physics + generated plugin | `description/gazebo/` |
+| Hardware mapping (board, actuators, encoder placeholders) | `config/hardware/active.yaml` |
+| Controller parameters | `config/controllers.yaml` (generated) |
+| RViz layout | `config/so_arm101_rviz.rviz` |
+| Launches | `launch/` |
+
+**Robot selection:** `robot_package:=so_arm101_urdf` or `LUCY_ROBOT_PACKAGE=so_arm101_urdf`.
+
+Bringup and `lucy_config_pipeline` both read `config/control.launch.yaml` for the
+entry xacro / base path / controllers file (do not hardcode `inmoov.urdf.xacro`).
+
+**Control-panel 3D viewer:** meshes are served by `/mesh/get`. STL payloads use
+`encoding=zlib_base64` (zlib then base64). Rebuild `lucy_msgs` +
+`lucy_config_pipeline` and refresh the panel after mesh-service changes.
+
+---
+
+## 2. Layout
+
+```text
+so_arm101_urdf/
+├── package.xml / CMakeLists.txt / version.txt
+├── docs/
+│   ├── DEVELOPER.md              # this file (technical)
+│   └── HARDWARE_SETUP.md         # plug / calibrate / run checklist
+├── launch/                 # control, gazebo, joint_preview, rviz, rviz_standalone
+├── config/
+│   ├── control.launch.yaml
+│   ├── controllers.yaml    # generated
+│   ├── so_arm101_rviz.rviz
+│   └── hardware/
+│       ├── active.yaml
+│       ├── active_meta.yaml
+│       └── configs/default.yaml   # stock template (not arm-specific)
+├── description/
+│   ├── urdf/robot.urdf.xacro
+│   ├── robot_description/
+│   │   ├── urdf/properties.xacro
+│   │   ├── urdf/robot_description.urdf.xacro
+│   │   └── meshes/stl/     # 13 STL meshes
+│   ├── ros2_control/so_arm101_ros2_control.xacro   # generated
+│   └── gazebo/
+│       ├── so_arm101_gazebo_physics.xacro
+│       ├── gazebo.xacro                            # generated
+│       └── gazebo_bridge.yaml                      # generated
+├── worlds/default.sdf
+├── scripts/apply_lerobot_calibration.py
+└── test/                   # test_xacro_smoke.py, test_apply_lerobot_calibration.py
+```
+
+---
+
+## 3. Joints and hardware
+
+| Joint | Typical URDF range (rad) | Servo |
+|-------|--------------------------|-------|
+| `Rotation` | ±1.92 | STS3215 |
+| `Pitch` | ±1.75 | STS3215 |
+| `Elbow` | −1.81 … 1.59 | STS3215 |
+| `Wrist_Pitch` | ±1.66 | STS3215 |
+| `Wrist_Roll` | ±2.79 | STS3215 |
+| `Jaw` | −0.17 … 1.75 | STS3215 |
+
+After `apply_lerobot_calibration.py`, URDF `lower`/`upper` are overwritten from
+that arm's measured travel (joint space). Table values above are stock defaults.
+
+Kinematics come from the calibrated `so101_new_calib.urdf` (SO-ARM100 / onshape-to-robot lineage).
+
+**Lucy schema note:** `servo_type` must be `180` / `270` / `300` (PWM-family field; SO-ARM uses `'300'` as a stand-in). Actuators are `board_class: bus_servo_only` → Rust crate `firmwares/rp2040_servo2040` (UART bus gated by YAML `HAS_BUS`). `physical_pin` is the STS3215 bus id. Optional board **`slave_address`** is the Modbus slave id on that board’s USB CDC (default `1`). `firmware.source_dir` is `lucy_embedded_firmware`; UF2 target is `lucy_so_arm`.
+
+Gazebo: stock `gz_ros2_control/GazeboSimSystem` ignores Lucy firmware-space `offset_rad` / `servo_*_rad` params on the gazebo xacro; joint limits come from the URDF. Those params are emitted for consistency with the HI ros2_control xacro, not because Gazebo applies them today.
+
+---
+
+## 4. Joint-state feedback (blue dots)
+
+On real hardware `/joint_states` carries measured positions: Feetech `Present_Position` →
+`lucy-embedded-firmware-linux` → SHM → `LucySystemHardware::read()`. The `type: encoder`
+sensor rows in the YAML stay `enabled: false` and are not part of this path.
+
+Mock loops commands back into SHM; Gazebo physics can lag.
+
+---
+
+## 5. Launch files
+
+| Launch | Purpose |
+|--------|---------|
+| `joint_preview.launch.py` | RSP + JSP GUI + RViz (no HW) |
+| `control.launch.py` | `lucy_control_supervisor` (RSP + CM + spawners; real or mock) |
+| `gazebo.launch.py` | gz-sim + spawn + controllers |
+| `rviz.launch.py` / `rviz_standalone.launch.py` | RViz only |
+
+```bash
+ros2 launch so_arm101_urdf joint_preview.launch.py
+ros2 launch so_arm101_urdf control.launch.py use_mock_hardware:=true
+# Feetech USB path: `mode:=real bridge:=linux` starts lucy-embedded-firmware-linux:
+LUCY_ROBOT_PACKAGE=so_arm101_urdf pixi run real-linux
+```
+
+---
+
+## 6. Xacro entry
+
+`description/urdf/robot.urdf.xacro`:
+
+- Includes properties + body
+- Unless `use_gazebo_sim`: includes generated `so_arm101_ros2_control.xacro`
+- If `use_gazebo_sim`: includes physics + generated `gazebo.xacro`
+
+Standalone expand:
+
+```bash
+ros2 run xacro xacro description/urdf/robot.urdf.xacro \
+  base_path:=$(pwd)/description \
+  controller_config:=$(pwd)/config/controllers.yaml \
+  use_mock_hardware:=true
+```
+
+---
+
+## 7. Desk bringup
+
+Plug-in, LeRobot calibrate, apply, regenerate, and run steps:
+[HARDWARE_SETUP.md](HARDWARE_SETUP.md).
+
+## 8. Calibration
+
+The control panel's wizard is the normal path (see [HARDWARE_SETUP.md](HARDWARE_SETUP.md)).
+Its backend is `calibration_node` in `lucy_config_pipeline`, driven by
+`config/hardware/calibration_profile.yaml`.
+
+**Homing is required.** Most joints' travel crosses the encoder's 4095→0 wrap at raw
+positions, which `limit_min <= limit_max` can't express. As in LeRobot, half-turn homing
+writes `Homing_Offset = position - 2047` to EEPROM at the mid pose, moving the wrap half a
+turn away. `offset` / `default` are therefore π (the homed centre, = URDF joint 0), not the
+midpoint of the travel window. Lucy keeps its limits in software and leaves the servos'
+own min and max open.
+
+**A preset belongs to one arm's EEPROM.** Its `calibration:` block records the offsets and
+the USB adapter. Boot compares them with the servos, so a recalibration elsewhere is caught.
+Activating a preset with the block writes its limits to the URDF; activating one without it
+restores `urdf_limits_stock.yaml`.
+
+`boards.*.serial_id` stays empty: it is the Pico flash id, and setting it triggers an MCU
+build and flash. The adapter's serial lives in `calibration.adapter_serial`.
+
+### Applying a LeRobot calibration
+
+```bash
+src/so_arm101_urdf/scripts/apply_lerobot_calibration.py \
+  ~/.cache/huggingface/lerobot/calibration/robots/so_follower/<arm>.json
+```
+
+Writes a new preset and activates it, plus URDF joint limits (unless `--no-urdf`).
+`--dry-run` reports without writing; `--config` patches another YAML in place. The logic is
+in `lucy_config_generator.calibration`, shared with the wizard.
+
+Records match actuators by servo bus id (`physical_pin`), not by LeRobot joint name. An
+unmatched record aborts before writes.
+
+`direction` is left alone, as it also carries the URDF's sign; check it against the 3D view.
+`drive_mode: 1` is reported rather than applied, and any other value is refused.
+
+Regenerate afterwards (§9).
+
+## 9. Regenerating configs
+
+From `lucy_ws` (pixi env; `generate_config` from `lucy_config_generator` source
+or a built install):
+
+```bash
+cd ~/Projects/lucy/lucy_ws
+OUT=/tmp/so_arm101_gen
+rm -rf "$OUT" && mkdir -p "$OUT"
+pixi run bash -lc '
+  export PYTHONPATH=src/lucy_ros_packages/lucy_config_generator:${PYTHONPATH:-}
+  python -m lucy_config_generator.process \
+    --input src/so_arm101_urdf/config/hardware/active.yaml \
+    --urdf src/so_arm101_urdf/description/urdf/robot.urdf.xacro \
+    --base-path src/so_arm101_urdf/description \
+    --controller-config src/so_arm101_urdf/config/controllers.yaml \
+    --output-dir /tmp/so_arm101_gen \
+    --targets all
+'
+cp "$OUT"/so_arm101_ros2_control.xacro \
+  src/so_arm101_urdf/description/ros2_control/
+cp "$OUT"/controllers.yaml src/so_arm101_urdf/config/
+cp "$OUT"/gazebo.xacro "$OUT"/gazebo_bridge.yaml \
+  src/so_arm101_urdf/description/gazebo/
+```
+
+Or use the control-panel **VALIDATE → ACTIVATE → RELOAD** pipeline with
+`robot_package:=so_arm101_urdf`.
+
+---
+
+## 10. Build and test
+
+```bash
+colcon build --symlink-install --packages-select so_arm101_urdf lucy_ros2_control
+source install/setup.bash
+colcon test --packages-select so_arm101_urdf --event-handlers console_direct+
+```
+
+No `package.xml` dependency on `lucy_ros2_control` (avoid cycles). Keep both
+packages built in the same workspace for control launches.
+
+---
+
+## 11. Differences from InMoov / Thais
+
+| | InMoov / Thais | SO-ARM101 |
+|--|----------------|-----------|
+| Form factor | Full humanoid | Single 6-DOF arm |
+| Entry xacro | `inmoov.urdf.xacro` | `robot.urdf.xacro` |
+| Meshes | Collada DAE | STL |
+| Servos | PWM hobby | STS3215 bus (schema still PWM-typed) |
+| Controllers | left/right arm + torso_head | `so_arm_controller` |
+| Encoders | None | Bus feedback (`Present_Position`); YAML encoder rows unused |
+
+---
+
+## 12. Future work
+
+- Leader → follower teleoperation bridge
+- Dual-arm (leader + follower) configs

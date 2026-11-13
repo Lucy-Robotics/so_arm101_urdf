@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!-- Gazebo (gz-sim) physics + surface tuning for SO-ARM101, included only when
+     use_gazebo_sim:=true. The gz_ros2_control plugin lives in the generated
+     description/gazebo/gazebo.xacro. -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Pin the base to the world so the arm does not fall under gravity. -->
+  <link name="world"/>
+  <joint name="world_to_base" type="fixed">
+    <parent link="world"/>
+    <!-- base_link already sits on the ground (z=0 = plate bottom), no offset needed. -->
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:macro name="gazebo_arm_link" params="link self_collide:=false">
+    <gazebo reference="${link}">
+      <mu1>0.6</mu1>
+      <mu2>0.6</mu2>
+      <kp>1e6</kp>
+      <kd>10</kd>
+      <self_collide>${self_collide}</self_collide>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:gazebo_arm_link link="base"/>
+  <xacro:gazebo_arm_link link="shoulder"/>
+  <xacro:gazebo_arm_link link="upper_arm"/>
+  <xacro:gazebo_arm_link link="lower_arm"/>
+  <xacro:gazebo_arm_link link="wrist"/>
+  <!-- Gripper / jaw: higher friction + self-collide for grasping contacts. -->
+  <xacro:gazebo_arm_link link="gripper" self_collide="true"/>
+  <xacro:gazebo_arm_link link="jaw" self_collide="true"/>
+</robot>
