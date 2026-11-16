@@ -349,8 +349,8 @@
   <link name="end_effector"/>
 
   <joint name="end_effector_joint" type="fixed">
-    <origin xyz="-0.0089 -0.0002 -0.1044" rpy="0 0 0"/>
-    <parent link="gripper"/>
+    <origin xyz="-0.1349 0.0052 0" rpy="0 0 0"/>
+    <parent link="lower_arm"/>
     <child link="end_effector"/>
   </joint>
 
