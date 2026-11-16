@@ -36,6 +36,7 @@ actuators:
     virtual_pin: 0
     physical_pin: 1
     servo_type: '300'
+    motor: sts3215/12v_345
     offset: 3.14159
     direction: 1
     scale: 1
@@ -49,6 +50,7 @@ actuators:
     virtual_pin: 1
     physical_pin: 2
     servo_type: '300'
+    motor: sts3215/12v_345
     offset: 3.14159
     direction: 1
     scale: 1
@@ -63,6 +65,7 @@ actuators:
     virtual_pin: 2
     physical_pin: 3
     servo_type: '300'
+    motor: sts3215/12v_345
     offset: 3.14159
     direction: 1
     scale: 1
@@ -76,6 +79,7 @@ actuators:
     virtual_pin: 3
     physical_pin: 4
     servo_type: '300'
+    motor: sts3215/12v_345
     offset: 3.14159
     direction: 1
     scale: 1
@@ -89,6 +93,7 @@ actuators:
     virtual_pin: 4
     physical_pin: 5
     servo_type: '300'
+    motor: sts3215/12v_345
     offset: 3.14159
     direction: 1
     scale: 1
@@ -102,6 +107,7 @@ actuators:
     virtual_pin: 5
     physical_pin: 6
     servo_type: '300'
+    motor: sts3215/12v_345
     offset: 3.14159
     direction: 1
     scale: 1
