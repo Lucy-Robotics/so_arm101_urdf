@@ -95,3 +95,27 @@ def test_xacro_gazebo_mode(controller_config: Path):
     assert r.returncode == 0, r.stderr + r.stdout
     assert "<robot" in r.stdout
     assert "gz_ros2_control" in r.stdout or "GazeboSimSystem" in r.stdout
+
+
+def test_end_effector_sits_on_the_wrist_pitch_motor(controller_config: Path):
+    import xml.etree.ElementTree as ET
+
+    urdf, base = _so_arm101_paths()
+    r = run_xacro(
+        [
+            str(urdf),
+            f"base_path:={base}",
+            f"controller_config:={controller_config}",
+            "use_mock_hardware:=true",
+        ]
+    )
+    assert r.returncode == 0, r.stderr + r.stdout
+    robot = ET.fromstring(r.stdout)
+    joint = robot.find("joint[@name='end_effector_joint']")
+    wrist = robot.find("joint[@name='Wrist_Pitch']")
+    assert joint is not None and joint.get("type") == "fixed"
+    assert joint.find("parent").get("link") == wrist.find("parent").get("link")
+    assert joint.find("child").get("link") == "end_effector"
+    at = [float(v) for v in joint.find("origin").get("xyz").split()]
+    motor = [float(v) for v in wrist.find("origin").get("xyz").split()]
+    assert all(abs(a - m) < 1e-6 for a, m in zip(at, motor))
