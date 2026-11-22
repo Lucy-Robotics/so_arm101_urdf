@@ -1,7 +1,7 @@
 # Minimal portable RViz config for SO-ARM101 follower arm.
 # Window Geometry only sets dock visibility (no fixed size/position) so the
 # layout still adapts to any screen. RobotModel uses /robot_description topic.
-# Fixed Frame must be base (root link) so the full TF tree connects.
+# Fixed Frame must be base_link (root link) so the full TF tree connects.
 
 Panels:
   - Class: rviz_common/Displays
@@ -61,7 +61,7 @@ Visualization Manager:
       Enabled: false
       Name: TF
   Global Options:
-    Fixed Frame: base
+    Fixed Frame: base_link
     Frame Rate: 30
   Name: root
   Transformation:

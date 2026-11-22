@@ -7,9 +7,9 @@
   <link name="world"/>
   <joint name="world_to_base" type="fixed">
     <parent link="world"/>
-    <child link="base"/>
-    <!-- Base mesh bottoms sit ~3 cm above the base link origin; shift down so the plate sits on the ground. -->
-    <origin xyz="0 0 -0.030081" rpy="0 0 0"/>
+    <!-- base_link already sits on the ground (z=0 = plate bottom), no offset needed. -->
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
   </joint>
 
   <xacro:macro name="gazebo_arm_link" params="link self_collide:=false">
