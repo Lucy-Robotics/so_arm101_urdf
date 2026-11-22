@@ -1,0 +1,13 @@
+# What the LCP calibration wizard needs to know about this robot.
+host_node: so_arm
+preset_prefix: so101
+controller_topic: /so_arm_controller/joint_trajectory
+# Proximal to distal, the order the wizard walks them in. min_span is the travel in ticks below
+# which a recording probably missed part of the range: about 70% of a real arm's, overridable.
+joints:
+  - {name: Rotation, motor: shoulder_pan, id: 1, min_span: 1700}
+  - {name: Pitch, motor: shoulder_lift, id: 2, min_span: 1700}
+  - {name: Elbow, motor: elbow_flex, id: 3, min_span: 1550}
+  - {name: Wrist_Pitch, motor: wrist_flex, id: 4, min_span: 1650}
+  - {name: Wrist_Roll, motor: wrist_roll, id: 5, min_span: 500, full_turn: true}
+  - {name: Jaw, motor: gripper, id: 6, min_span: 1050}

@@ -1,0 +1,10 @@
+# URDF limits to go back to when activating a preset with no calibration block.
+# The file holding the <limit> tags, relative to this package: not the entry xacro, which includes it.
+urdf: description/robot_description/urdf/robot_description.urdf.xacro
+joints:
+  Rotation: [-1.91986, 1.91986]
+  Pitch: [-1.74533, 1.74533]
+  Elbow: [-1.81317, 1.58767]
+  Wrist_Pitch: [-1.65806, 1.65806]
+  Wrist_Roll: [-2.79253, 2.79253]
+  Jaw: [-0.174533, 1.74533]
